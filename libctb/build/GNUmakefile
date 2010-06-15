@@ -135,7 +135,7 @@ all: ../lib/libctb$(LIBFLAG)$(GPIBFLAG)-0.15.a ../lib/libctb$(LIBFLAG)$(GPIBFLAG
 
 install: install_ctb_lib install_ctb_dll
 	$(INSTALL) -d $(DESTDIR)$(prefix)/include/ctb-0.15
-	for f in ctb.h fifo.h getopt.h $(GPIBINC) iobase.h linux/serport.h linux/timer.h serport.h serportx.h timer.h; do \
+	for f in ctb.h fifo.h getopt.h $(GPIBINC) iobase.h kbhit.h linux/serport.h linux/timer.h serport.h serportx.h timer.h; do \
 	if test ! -d $(DESTDIR)$(prefix)/include/ctb-0.15/`dirname $$f` ; then \
 	$(INSTALL) -d $(DESTDIR)$(prefix)/include/ctb-0.15/`dirname $$f`; \
 	fi; \
@@ -143,7 +143,7 @@ install: install_ctb_lib install_ctb_dll
 	done
 
 uninstall: uninstall_ctb_lib uninstall_ctb_dll
-	for f in ctb.h fifo.h getopt.h $(GPIBINC) iobase.h linux/serport.h linux/timer.h serport.h serportx.h timer.h; do \
+	for f in ctb.h fifo.h getopt.h $(GPIBINC) iobase.h kbhit.h linux/serport.h linux/timer.h serport.h serportx.h timer.h; do \
 	rm -f $(DESTDIR)$(prefix)/include/ctb-0.15/$$f; \
 	done
 
