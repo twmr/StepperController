@@ -1,2 +1,5 @@
 *.o
 *~
+libctb/build/release/
+libctb/lib/libctb-0.15.a
+libctb/lib/libctb-0.15.so
