@@ -3,7 +3,8 @@ MACHINE = $(shell uname -n)
 
 ifeq ($(MACHINE), firebird)
   CC		= g++
-  CCFLAGS       =
+  CCFLAGS       = -Wall -O3
+  CCFLAGS       += -std=c++0x -pthread # C++0x standard
 endif
 
 ifeq ($(MACHINE), mustang)
