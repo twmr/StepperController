@@ -1,2 +1,9 @@
 Stepper Motor Control
 (Thomas Hisch 2010)
+
+Linux:
+------
+
+if you use an USB-RS232 converter (usually such converters have /dev/ttyUSB0 as linux device
+  name) use the devicename as the first argument to ctb::open instead of
+  CTB::COM[1-9].
