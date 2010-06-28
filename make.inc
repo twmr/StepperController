@@ -10,4 +10,5 @@ ifeq ($(MACHINE), mustang)
   CC            = g++
   CCFLAGS       += -march=amdfam10 -mabm -msse4a -fprefetch-loop-arrays \
                   -combine -funroll-all-loops
+  CCFLAGS	+= -std=c++0x -pthread # C++0x standard
 endif
