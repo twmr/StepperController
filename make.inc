@@ -1,6 +1,8 @@
 SYSTEM = $(shell uname)
 MACHINE = $(shell uname -n)
 
+BOOST=yes
+
 ifeq ($(MACHINE), firebird)
   CC		= g++
   CCFLAGS       = -Wall -O3
@@ -13,3 +15,7 @@ ifeq ($(MACHINE), mustang)
                   -combine -funroll-all-loops
   CCFLAGS	+= -std=c++0x -pthread # C++0x standard
 endif
+
+ifeq ($(BOOST),yes)
+  CCFLAGS       = -DUSE_BOOST
+end
