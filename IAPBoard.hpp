@@ -12,9 +12,9 @@ public:
     void reset();
 
 private:
+    int baud;
     STD_TR1::shared_ptr< RS232 > serial_interface;
     STD_TR1::shared_ptr< std::mutex > boardmutex;
-    int baud;
 };
 
 #endif 
