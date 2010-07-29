@@ -14,7 +14,8 @@ const char* helpMessage =
 {
     "HELP:\n"
     "available commands are:\n"
-    "quit       : close the client\n"
+    "quit       : quit the client\n"
+    "close      : stop the current session\n"
     "connect    : start up stepperboard\n"
     "disconnect : shut down stepperboard\n"
     "serialtest : test rs232 communication\n"
@@ -69,8 +70,13 @@ void threadTCPIP()
 
 		    if(! data.compare("serialtest")) {
 			// fixme lock this
-			board->test();
+			board->test(new_sock);
 			continue;
+		    }
+
+		    if(! data.compare("close")) {
+			new_sock << "stopping current session";
+			break;
 		    }
 
 		    new_sock << "unknown command" << data; // << endl;
@@ -91,14 +97,15 @@ void threadTCPIP()
 int main(int argc, char** argv)
 {
     int ret = 0;
-    string configfilename;
+    string configfilename("rsconf");
 
     if(argc > 1)
 	configfilename = argv[1];
 
-    cout << "SERVER: start up IAP Board" << endl;
-    board = STD_TR1::shared_ptr<IAPBoard>(new IAPBoard);
-    
+    RS232config config(configfilename);
+
+    cout << "SERVER: init IAPBoard" << endl;
+    board = STD_TR1::shared_ptr<IAPBoard>(new IAPBoard(config));
     
     cout << "SERVER: starting threads" << endl;
     std::thread trs232(threadRS232);

@@ -7,10 +7,9 @@ default: ${TARGETS}
 MAINO= 	tcp_ip/serversock.o \
 	tcp_ip/socket.o \
 	IAPBoard.o \
+	rs232config.o \
+	rs232.o \
 	ctb.o
-
-
-
 
 IAP_server: IAP_server.o ${MAINO}
 	$(CC)  ${MAINO} ${CCFLAGS} -lctb-0.15 $< -o $@

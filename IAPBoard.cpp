@@ -1,32 +1,31 @@
 #include <iostream>
 
+#include "tcp_ip/serversock.hpp"
 #include "IAPBoard.hpp"
 
-IAPBoard::IAPBoard() :
-    baud(9600), // for test with  SBC
-    //baud(4900), for IAPboard
+IAPBoard::IAPBoard(const RS232config & config) :
     connected(false),
-    serial_interface(STD_TR1::shared_ptr< RS232 >(new sctl_ctb(baud)))
+    serial_interface(STD_TR1::shared_ptr< RS232 >(new sctl_ctb(config)))
 {
-    std::cout << "board: ctor" << std::endl;
-
-    //opens and initializes the serial device
-    serial_interface->connect();
+    /* opens/initializes the serial device */
+    serial_interface->open();
 }
 
 IAPBoard::~IAPBoard()
 {
- std::cout << "board: dtor" << std::endl;
-
  if(connected)
      disconnect();
-
 }
 
 //activate the Steppercontrolboard
 void IAPBoard::connect()
 {
      std::cout << "board: connecting to sctlbrd" << std::endl;
+
+     /* connection commands */
+
+     connected = true;
+
 }
 
 
@@ -34,20 +33,25 @@ void IAPBoard::connect()
 void IAPBoard::disconnect()
 {
      std::cout << "board: disconnecting from sctlbrd" << std::endl;
+
+     /* disconnection commands */
+
+     connected = false;
+
 }
 
 
-void IAPBoard::test()
+void IAPBoard::test(ServerSock &sock)
 {
     char buffer[1024];
  
-    std::cout << "board: serial test" << std::endl;
+    serial_interface->rslog("board: serial test");
 
     while(serial_interface->receive(buffer, 1024) <= 0 ) {
 	std::cout << "board: did not read anything from serial device" << std::endl;
 	sleep(1);
     }
-    std::cout << buffer;
+    sock << buffer;
 
 }
 

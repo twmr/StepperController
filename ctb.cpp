@@ -3,49 +3,38 @@
 #include "RS232.hpp"
 #include "global.hpp"
 
-sctl_ctb::sctl_ctb(const int baud) :
-    serialPort(STD_TR1::shared_ptr< ctb::SerialPort >(new ctb::SerialPort())) ,
-    device(STD_TR1::shared_ptr< ctb::IOBase >(static_cast<ctb::IOBase*>(0))) ,
-    devname("/dev/ttyUSB0"),
-    eos("\r\n"),
-    protocol("8N1")
+sctl_ctb::sctl_ctb(const RS232config & config) :
+    RS232(config),
+    serialPort(STD_TR1::shared_ptr< ctb::SerialPort >(new ctb::SerialPort())),
+    device(STD_TR1::shared_ptr< ctb::IOBase >(static_cast<ctb::IOBase*>(0)))
 {
-    std::cout << "ctb ctor" << std::endl;
-
-    timeout = 100;
-    quit = 0;
-    baudrate = baud;
-}
-
-sctl_ctb::~sctl_ctb() {
-    std::cout << "ctb dtor" << std::endl;
 }
 
 
-// we should call this function open instead of connect
-int sctl_ctb::connect() 
+void sctl_ctb::open() 
 {
-    std::cout << "ctb connect" << std::endl;
+    rslog("ctb open");
 
-    if( serialPort->Open( devname.c_str(), baudrate, 
-			  protocol.c_str(), 
+    if( serialPort->Open( rsconfig.get_devname().c_str(), 
+			  rsconfig.get_baudrate(),
+			  rsconfig.get_protocol().c_str(), 
 			  ctb::SerialPort::NoFlowControl ) >= 0 ) {
 	device = serialPort;	
     }
 
     if( ! device ) {
-	std::cerr << "Cannot open " << devname.c_str() << std::endl;
-	return -1;
+	std::cerr << "Cannot open " <<  rsconfig.get_devname()  << std::endl;
+	abort();
     }
-
-    return 0;
 }
 
-int sctl_ctb::disconnect() 
-{
-    std::cout << "ctb disconnect" << std::endl;
 
-    return 0;
+void sctl_ctb::close() 
+{
+    rslog("ctb close");
+
+    if( device )
+	device->Close();
 }
 
 
@@ -64,6 +53,8 @@ size_t sctl_ctb::receive(char *buf, const ssize_t n)
 	buf[ size ] = 0;
 	//std::cout << buf;
     }
+    
+    rslog(buf);
     return size;
 }
 

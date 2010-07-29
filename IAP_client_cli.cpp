@@ -24,10 +24,15 @@ int main (int argc, char *argv[]) {
 	   string s;
 	   getline(cin, s, '\n' );
 
-	   if(!s.compare("quit")) {
+	   // cout << "got "  << s[0] << s.length() << endl;
+
+	   if(!s.compare("quit") || !s.compare("q")) {
                /* disconnect from tcp/ip server */
 	       break; 
 	   }
+
+	   if(!s.length()) // empty string
+	       continue;
 	   
 	   try {
 	       client_socket << s;

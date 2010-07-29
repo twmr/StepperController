@@ -1,0 +1,6 @@
+devname=/dev/ttyUSB0
+eos=DUMMY
+protocol=8N1
+baud=9600
+timeout=100
+quit=0
