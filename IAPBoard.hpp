@@ -12,6 +12,7 @@ public:
     ~IAPBoard();
     void reset();
     void test(ServerSock&);
+    void send_command(ServerSock&,const std::string &);
     void connect();
     void disconnect();
 

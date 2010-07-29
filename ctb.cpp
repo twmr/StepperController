@@ -42,19 +42,33 @@ size_t sctl_ctb::receive(char *buf, const ssize_t n)
 {
     size_t size = 0;
     //ssize_t totalsize = 0;
-    //int timeout = 100;
 
-    size = device->Read( buf,
-			 n);
+    size = device->Read( buf, n);
 
     // something received?
     if( size > 0 ) {
 	//totalsize += size;
 	buf[ size ] = 0;
 	//std::cout << buf;
+	rslog(buf);
     }
     
-    rslog(buf);
+   
+    return size;
+}
+
+
+size_t sctl_ctb::send( const char *buf, const ssize_t n)
+{
+    size_t size = 0;
+
+    size = device->Write( const_cast<char*>(buf), n);
+
+    // sent string ?
+    if( size > 0 ) {
+	rslog("#> ", buf);
+    }
+       
     return size;
 }
 

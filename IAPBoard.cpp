@@ -41,14 +41,32 @@ void IAPBoard::disconnect()
 }
 
 
+void IAPBoard::send_command(ServerSock &sock, const std::string & cmd)
+{
+    char buffer[1024];
+ 
+    serial_interface->rslog(cmd, "#>");
+
+    while(serial_interface->send(cmd.c_str(), cmd.length()) <= 0 ) {
+	sleep(1);
+    }
+
+    while(serial_interface->receive(buffer, 1024) <= 0 ) {
+	sleep(1);
+    }
+
+    sock << buffer;
+
+}
+
+
 void IAPBoard::test(ServerSock &sock)
 {
     char buffer[1024];
  
-    serial_interface->rslog("board: serial test");
+    serial_interface->rslog(" serial test", "#>");
 
     while(serial_interface->receive(buffer, 1024) <= 0 ) {
-	std::cout << "board: did not read anything from serial device" << std::endl;
 	sleep(1);
     }
     sock << buffer;

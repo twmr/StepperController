@@ -41,11 +41,10 @@ public:
     // pure virtual functions
     virtual void open() = 0;
     virtual void close() = 0;
-
-    virtual int send() {};
-    virtual size_t receive() {};
+    virtual size_t send(const char *buf, ssize_t n) = 0;
     virtual size_t receive(char *buf, const ssize_t n) = 0;
-    int rslog(const std::string & logstring);
+
+    int rslog(const std::string & logstring, const std::string prefix = "");
     const RS232config &rsconfig;
 
 private:
@@ -61,6 +60,7 @@ public:
     void close();
     //int send() {};
     //int receive() {};
+    size_t send(const char *buf, const ssize_t n);
     size_t receive(char *buf, const ssize_t n);
     
 private:

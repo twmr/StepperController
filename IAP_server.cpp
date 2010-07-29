@@ -79,7 +79,8 @@ void threadTCPIP()
 			break;
 		    }
 
-		    new_sock << "unknown command" << data; // << endl;
+		    data.append("\r\n"); /* maybe not needed */
+		    board->send_command(new_sock, data);
 		    
 		}
          }
