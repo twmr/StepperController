@@ -28,13 +28,9 @@ const char* helpMessage =
 int main(int argc,char* argv[])
 {
     int baudrate = 19200;
-
     string devname = ctb::COM1;
-
     string eos = "\r\n";
-
     string protocol = "8N1";
-
     int timeout = 100;
 
     int quit = 0;

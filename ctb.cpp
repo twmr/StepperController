@@ -6,7 +6,7 @@
 sctl_ctb::sctl_ctb(const int baud) :
     serialPort(STD_TR1::shared_ptr< ctb::SerialPort >(new ctb::SerialPort())) ,
     device(STD_TR1::shared_ptr< ctb::IOBase >(static_cast<ctb::IOBase*>(0))) ,
-    devname(ctb::COM1),
+    devname("/dev/ttyUSB0"),
     eos("\r\n"),
     protocol("8N1")
 {
@@ -15,6 +15,17 @@ sctl_ctb::sctl_ctb(const int baud) :
     timeout = 100;
     quit = 0;
     baudrate = baud;
+}
+
+sctl_ctb::~sctl_ctb() {
+    std::cout << "ctb dtor" << std::endl;
+}
+
+
+// we should call this function open instead of connect
+int sctl_ctb::connect() 
+{
+    std::cout << "ctb connect" << std::endl;
 
     if( serialPort->Open( devname.c_str(), baudrate, 
 			  protocol.c_str(), 
@@ -23,19 +34,37 @@ sctl_ctb::sctl_ctb(const int baud) :
     }
 
     if( ! device ) {
-	std::cout << "Cannot open " << devname.c_str() << std::endl;
-	return;
+	std::cerr << "Cannot open " << devname.c_str() << std::endl;
+	return -1;
     }
 
-}
-
-sctl_ctb::~sctl_ctb() {
-    std::cout << "ctb dtor" << std::endl;
-}
-
-int sctl_ctb::connect() {
-    std::cout << "ctb connect" << std::endl;
     return 0;
+}
+
+int sctl_ctb::disconnect() 
+{
+    std::cout << "ctb disconnect" << std::endl;
+
+    return 0;
+}
+
+
+size_t sctl_ctb::receive(char *buf, const ssize_t n) 
+{
+    size_t size = 0;
+    //ssize_t totalsize = 0;
+    //int timeout = 100;
+
+    size = device->Read( buf,
+			 n);
+
+    // something received?
+    if( size > 0 ) {
+	//totalsize += size;
+	buf[ size ] = 0;
+	//std::cout << buf;
+    }
+    return size;
 }
 
 
