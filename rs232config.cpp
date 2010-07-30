@@ -1,4 +1,4 @@
-#include "RS232.hpp"
+#include "rs232.hpp"
 #include <stdlib.h>
 
 RS232config::RS232config(const std::string & configfile)

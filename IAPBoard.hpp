@@ -1,7 +1,7 @@
 #ifndef __IAPBoard__
 #define __IAPBoard__
 
-#include "RS232.hpp"
+#include "rs232.hpp"
 #include "global.hpp"
 #include "tcp_ip/serversock.hpp"
 #include <mutex>

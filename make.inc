@@ -14,6 +14,7 @@ endif
 
 ifeq ($(MACHINE), mustang)
   CC            = g++
+  CCFLAGS       += -Wall -Wextra -O3
   CCFLAGS       += -march=amdfam10 -mabm -msse4a -fprefetch-loop-arrays \
                   -combine -funroll-all-loops
   ifeq ($(CPP_0x),yes)

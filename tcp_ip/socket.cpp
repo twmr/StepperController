@@ -32,6 +32,7 @@ bool Socket::UDP_create() {
    if (m_sock < 0) {
       throw SockExcept("Fehler beim Anlegen eines Socket");
    }
+   return true;
 }
 
 // Erzeugt die Bindung an die Serveradresse

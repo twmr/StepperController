@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "RS232.hpp"
+#include "rs232.hpp"
 #include "global.hpp"
 
 sctl_ctb::sctl_ctb(const RS232config & config) :

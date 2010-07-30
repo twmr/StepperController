@@ -1,4 +1,4 @@
-#include "RS232.hpp"
+#include "rs232.hpp"
 #include <ctime>
 
 RS232::RS232(const RS232config & config) :
