@@ -18,7 +18,7 @@ RS232config::RS232config(const std::string & configfile)
     {
         f.getline(cstring, sizeof(cstring));
 	pch=strchr(cstring,'=');
-	if (pch)
+	if (cstring[0] != '#' && pch != NULL)
 	{
 	    *pch = '\0';
 
@@ -47,8 +47,6 @@ RS232config::RS232config(const std::string & configfile)
     std::cout << "\tBaudrate: " << get_int_param("baudrate")  << std::endl;
     std::cout << "\tTimeout: " << get_int_param("timeout")  << std::endl;
     std::cout << "\tQuit: " << get_int_param("quit") << std::endl;
-
-    f.close();
 }
 
 double RS232config::get_double_param(const std::string& s) const throw (E_missing_parameter)
