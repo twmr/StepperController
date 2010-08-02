@@ -3,13 +3,13 @@
 
 #include <iostream>
 #include <fstream>
-#include <stdlib.h>
+#include <map>
+#include <cstdlib>
 
 
 #include "ctb-0.15/ctb.h"
 #include "global.hpp"
-
-
+#include "exceptions.hpp"
 
 class RS232config {
 public:
@@ -24,7 +24,22 @@ public:
     int get_timeout() const { return timeout; };
     int get_quit() const { return quit; };
 
+    const char* name() const { return "rs232";};
+
+    bool get_param(const std::string& s, double& v) const;
+    bool get_param(const std::string& s, int& v) const;
+    bool get_param(const std::string& s, std::string& v) const;
+
+
+    double      get_double_param(const std::string& s) const throw (E_missing_parameter);
+    int         get_int_param(const std::string& s) const throw (E_missing_parameter);
+    std::string get_string_param(const std::string& s) const throw (E_missing_parameter);
+
 private:
+    std::map<std::string, double> r_params;
+    std::map<std::string, std::string> s_params;
+    std::map<std::string, int> i_params;
+
     std::string devname;
     std::string eos;
     std::string protocol;

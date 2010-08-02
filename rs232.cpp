@@ -2,8 +2,8 @@
 #include <ctime>
 
 RS232::RS232(const RS232config & config) :
-    myfilestream("rs232.log", std::ios::out | std::ios::app),
-    rsconfig(config)
+    rsconfig(config),
+    myfilestream("rs232.log", std::ios::out | std::ios::app)
 {
     if(myfilestream.is_open() != true) {
 	std::cout << "couldn't open rs232 log file" << std::endl;
@@ -25,4 +25,6 @@ int RS232::rslog(const std::string & logstring, const std::string prefix)
 
     myfilestream << tmp << " | "<< prefix << logstring << std::endl;
     myfilestream << std::flush;
+
+    return 0;
 }

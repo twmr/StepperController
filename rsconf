@@ -1,6 +1,6 @@
-/dev/ttyUSB0
-DUMMY
-8N1
-9600
-100
-0
+devname=/dev/ttyUSB0
+eos=\r\n
+protocol=8N1
+baudrate=9600
+timeout=100
+quit=0
