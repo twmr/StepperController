@@ -15,17 +15,18 @@ void sctl_ctb::open()
 {
     rslog("ctb open");
 
-    if( serialPort->Open( rsconfig.get_devname().c_str(), 
-			  rsconfig.get_baudrate(),
-			  rsconfig.get_protocol().c_str(), 
+    if( serialPort->Open( rsconfig.get_string_param("devname").c_str(),
+			  rsconfig.get_int_param("baudrate"),
+			  rsconfig.get_string_param("protocol").c_str(),
 			  ctb::SerialPort::NoFlowControl ) >= 0 ) {
 	device = serialPort;	
     }
 
     if( ! device ) {
-	std::cerr << "Cannot open " <<  rsconfig.get_devname()  << std::endl;
+	std::cerr << "Cannot open " <<  rsconfig.get_string_param("devname")  << std::endl;
 	abort();
     }
+    std::cout << "opened " <<  rsconfig.get_string_param("devname")  << std::endl;
 }
 
 
