@@ -53,19 +53,15 @@ private:
     STD_TR1::shared_ptr< std::mutex > boardmutex;
     const IAPconfig &axisconfig;
 
-    struct mct_Axis
-    {
+    struct mct_Axis {
         long axis_BaseSpeed;
         long axis_SlewSpeed;
         long axis_SlowJogSpeed;
         long axis_FastJogSpeed;
         long axis_CreepSteps;
-
         long axis_Accel;
-
         long axis_LowerLimit;
         long axis_UpperLimit;
-
         long axis_Position;
         char axis_MotorStatus;  /* currently unused */
         double axis_Multiplier;

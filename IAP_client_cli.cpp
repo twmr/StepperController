@@ -44,8 +44,6 @@ int main (int argc, char *argv[]) {
             } else
                 getline(cin, s, '\n' );
 
-            // cout << "got "  << s[0] << s.length() << endl;
-
             if(!s.compare("quit") || !s.compare("q")) {
                 /* disconnect from tcp/ip server */
                 break;
@@ -66,7 +64,6 @@ int main (int argc, char *argv[]) {
                 cout << "Exception: " 
                      << e.get_SockExcept() << endl;
             }
-	   
         } // while (1)
         client_socket.close();
 
@@ -77,5 +74,5 @@ int main (int argc, char *argv[]) {
     }
 
     f.close();
-    return 0;   
+    return 0;
 }
