@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdio>
 
 #include "tcp_ip/serversock.hpp"
 #include "IAPBoard.hpp"
@@ -55,7 +56,7 @@ void IAPBoard::send_command(ServerSock &sock, const std::string & cmd)
         sleep(1);
     }
 
-    while(serial_interface->receive(buffer, 1024) <= 0 ) {
+    while(serial_interface->receive(buffer, sizeof(buffer)) <= 0 ) {
         sleep(1);
     }
 
@@ -68,31 +69,36 @@ int IAPBoard::getaxisnum(ServerSock& sock) const
     return (curaxis-axis)/sizeof(struct mct_Axis);
 }
 
-int IAPBoard::setaxisnum(ServerSock& sock, const int axisnum)
+static string binary( unsigned long n )
 {
-    int curaxisnum  = (curaxis-axis)/sizeof(struct mct_Axis);
-    string msg;
+    char     result[ 4 + 1 ];
+    unsigned index  = 4;
+    result[ index ] = '\0';
+
+    do {
+        result[ --index ] = '0' + (n & 1);
+        n >>= 1;
+    } while (index);
+
+    return string(result);
+}
+
+int IAPBoard::setaxisnum(ServerSock& sock, const unsigned int axisnum)
+{
+    unsigned int curaxisnum  = (curaxis-axis)/sizeof(struct mct_Axis);
 
     cout << "curaxis " << curaxisnum << " axisnum " << axisnum << endl;
     
-    if (axisnum == curaxisnum) return - 1;
+    //if (axisnum == curaxisnum) return - 1;
 
-    switch (axisnum) {
-    case 0:
-        msg = "0000";
-        break;
-    case 1:
-        msg = "0001";
-        break;
-    case 2:
-        msg = "0010";
-        break;
-    default:
+    if(axisnum >= NR_AXIS) {
         cout << " axnium "  << axisnum << " is not a valid axinum" << endl;
-        return -EINVAL;    
+        return -EINVAL;
     }
-    
-    send_command(sock, "1WP"+msg);
+
+    send_command(sock, "1WP"+binary(axisnum));
+
+    curaxis = &axis[axisnum];
     return curaxisnum;
 }
 
@@ -104,14 +110,12 @@ void IAPBoard::test(ServerSock &sock)
     serial_interface->rslog(" serial test", "#>");
 
     while(serial_interface->receive(buffer, 1024) <= 0 ) {
-	sleep(1);
+        sleep(1);
     }
     sock << buffer;
-
 }
 
 void IAPBoard::reset()
 {
  std::cout << "board: reset" << std::endl;
-
 }

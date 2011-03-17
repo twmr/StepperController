@@ -8,9 +8,8 @@
 
 class IAPBoard {
 public:
-    static const int NR_AXIS = 3;  // 3 axis are currently controlled by the IAP Board
-                                // 
-    IAPBoard(const RS232config & config);
+    static const unsigned int NR_AXIS = 3;  // 3 axis are currently controlled by the IAP Board
+    IAPBoard(const RS232config &);
     ~IAPBoard();
     void reset();
     void test(ServerSock&);
@@ -18,7 +17,7 @@ public:
     void connect();
     void disconnect();
     int getaxisnum(ServerSock&) const;
-    int setaxisnum(ServerSock&, const int axisnum);
+    int setaxisnum(ServerSock&, const unsigned int);
 
 private:
     bool connected;
