@@ -2,7 +2,7 @@
 #include "socket.hpp"
 
 ServerSock::ServerSock ( int port ) {
-   Socket::Socket();
+   Socket();
    if ( ! Socket::create() ) {
       throw SockExcept (
          "ServerSock: Fehler bei Socket::create()");

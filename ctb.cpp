@@ -11,35 +11,35 @@ sctl_ctb::sctl_ctb(const RS232config & config) :
 }
 
 
-void sctl_ctb::open() 
+void sctl_ctb::open()
 {
     rslog("ctb open");
 
     if( serialPort->Open( rsconfig.get_string_param("devname").c_str(),
-			  rsconfig.get_int_param("baudrate"),
-			  rsconfig.get_string_param("protocol").c_str(),
-			  ctb::SerialPort::NoFlowControl ) >= 0 ) {
-	device = serialPort;	
+        rsconfig.get_int_param("baudrate"),
+        rsconfig.get_string_param("protocol").c_str(),
+        ctb::SerialPort::NoFlowControl ) >= 0 ) {
+        device = serialPort;
     }
 
     if( ! device ) {
-	std::cerr << "Cannot open " <<  rsconfig.get_string_param("devname")  << std::endl;
-	abort();
+        std::cerr << "Cannot open " <<  rsconfig.get_string_param("devname")  << std::endl;
+        abort();
     }
     std::cout << "opened " <<  rsconfig.get_string_param("devname")  << std::endl;
 }
 
 
-void sctl_ctb::close() 
+void sctl_ctb::close()
 {
     rslog("ctb close");
 
     if( device )
-	device->Close();
+        device->Close();
 }
 
 
-size_t sctl_ctb::receive(char *buf, const ssize_t n) 
+size_t sctl_ctb::receive(char *buf, const ssize_t n)
 {
     size_t size = 0;
     //ssize_t totalsize = 0;
@@ -48,13 +48,12 @@ size_t sctl_ctb::receive(char *buf, const ssize_t n)
 
     // something received?
     if( size > 0 ) {
-	//totalsize += size;
-	buf[ size ] = 0;
-	//std::cout << buf;
-	rslog(buf);
+        //totalsize += size;
+        buf[ size ] = 0;
+        //std::cout << buf;
+        rslog(buf);
     }
-    
-   
+
     return size;
 }
 
@@ -67,10 +66,7 @@ size_t sctl_ctb::send( const char *buf, const ssize_t n)
 
     // sent string ?
     if( size > 0 ) {
-	rslog("#> ", buf);
+        rslog("#> ", buf);
     }
-       
     return size;
 }
-
-

@@ -1,5 +1,7 @@
 #include <iostream>
 #include <thread>
+#include <boost/regex.hpp>
+
 
 #include "IAP_server.hpp"
 #include "tcp_ip/serversock.hpp"
@@ -19,6 +21,8 @@ const char* helpMessage =
     "connect    : start up stepperboard\n"
     "disconnect : shut down stepperboard\n"
     "serialtest : test rs232 communication\n"
+    "\n"
+    "setaxisnum N\n"
 };
 
 void threadRS232()
@@ -44,8 +48,7 @@ void threadTCPIP()
 		while ( true ) {
 		    string data;
 		    new_sock >> data;
-		    cout << "Got Command: " 
-			 << data << endl;
+		    cout << "Got Command: " << data << endl;
 
 		    if(! data.compare("help")) {
 			new_sock << helpMessage;
@@ -75,11 +78,27 @@ void threadTCPIP()
 		    }
 
 		    if(! data.compare("close")) {
-			new_sock << "stopping current session";
-			break;
+            new_sock << "stopping current session";
+            break;
 		    }
 
-		    data.append("\r\n"); /* maybe not needed */
+        boost::regex e("(^setaxisnum )([0-2])$");
+        boost::smatch what;
+        if(boost::regex_match(data, what, e, boost::match_extra))
+        {
+            int axisnum;
+            
+            if(what.size() < 3)
+                std::cerr << "not a valid regexp match (whole match " << what[0] <<
+                    " )" << std::endl;
+
+            axisnum = atoi(std::string(what[2]).c_str());
+
+            std::cout << "axisnum from regex: " << axisnum << std::endl;
+            board->setaxisnum(new_sock,axisnum);
+            continue;
+        }
+
 		    board->send_command(new_sock, data);
 		    
 		}
@@ -108,8 +127,9 @@ int main(int argc, char** argv)
     cout << "SERVER: init IAPBoard" << endl;
     board = STD_TR1::shared_ptr<IAPBoard>(new IAPBoard(config));
     
-    cout << "SERVER: starting threads" << endl;
+    cout << "SERVER: starting rs232 thread" << endl;
     std::thread trs232(threadRS232);
+    cout << "SERVER: starting tcpip thread" << endl;
     std::thread ttcpip(threadTCPIP);
 
     trs232.join();

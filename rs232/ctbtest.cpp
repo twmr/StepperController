@@ -33,7 +33,7 @@ int main(int argc,char* argv[])
     string protocol = "8N1";
     int timeout = 100;
 
-    int quit = 0;
+    //int quit = 0;
 
     int val;
 
@@ -96,7 +96,7 @@ int main(int argc,char* argv[])
 	   // send data throughout the connected device independent of the typ
 	   if( device->Writev( (char*)line.c_str(),
 					   line.size(), 
-					   timeout ) != line.size() ) {
+					   timeout ) != (int)line.size() ) {
 			 
 		  cerr << "Incomplete data transmission" << endl;
 
