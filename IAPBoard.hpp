@@ -6,23 +6,52 @@
 #include "tcp_ip/serversock.hpp"
 #include <mutex>
 
+
+class IAPconfig {
+public:
+    IAPconfig() {};
+    IAPconfig(const std::string & configfile);
+    ~IAPconfig() {};
+
+    const char* name() const { return "rs232";};
+
+    bool get_param(const std::string& s, double& v) const;
+    bool get_param(const std::string& s, int& v) const;
+    bool get_param(const std::string& s, std::string& v) const;
+
+    double      get_double_param(const std::string& s) const throw (E_missing_parameter);
+    int         get_int_param(const std::string& s) const throw (E_missing_parameter);
+    std::string get_string_param(const std::string& s) const throw (E_missing_parameter);
+
+private:
+    //std::map<std::string, double> r_params;
+    std::map<std::string, std::string> s_params;
+    //std::map<std::string, int> i_params;
+};
+
+
 class IAPBoard {
 public:
-    static const unsigned int NR_AXIS = 3;  // 3 axis are currently controlled by the IAP Board
-    IAPBoard(const RS232config &);
+    IAPBoard(const RS232config &, const IAPconfig &);
     ~IAPBoard();
     void reset();
     void test(ServerSock&);
     void send_command(ServerSock&,const std::string &);
-    void connect();
+    int send_command_quiet(const std::string &);
+    void connect(ServerSock& );
     void disconnect();
-    int getaxisnum(ServerSock&) const;
-    int setaxisnum(ServerSock&, const unsigned int);
+    int initAxis(ServerSock&);
+    int getaxisnum() const;
+    int setaxisnum(ServerSock&, const unsigned int, bool);
+
+    int get_nr_axis(void) const { return NR_AXIS; };
 
 private:
+    static const unsigned int NR_AXIS = 3;  // 3 axis are currently controlled by the IAP Board
     bool connected;
     STD_TR1::shared_ptr< RS232 > serial_interface;
     STD_TR1::shared_ptr< std::mutex > boardmutex;
+    const IAPconfig &axisconfig;
 
     struct mct_Axis
     {

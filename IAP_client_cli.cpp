@@ -48,23 +48,24 @@ int main (int argc, char *argv[]) {
 
             if(!s.compare("quit") || !s.compare("q")) {
                 /* disconnect from tcp/ip server */
-                break; 
+                break;
             }
 
             if(!s.length()) // empty string
                 continue;
 
             try {
-
                 cmd.code = MSG_CMD;
                 cmd.msg = s;
                 //FIXME send msg in one run!
-                
-                client_socket << cmd;
-                client_socket >> reply;
-
+                client_socket << cmd.msg;
+                client_socket >> reply.msg;
+                cout << reply.msg << endl;
             }
-            catch ( SockExcept& ) {}
+            catch ( SockExcept& e) {
+                cout << "Exception: " 
+                     << e.get_SockExcept() << endl;
+            }
 	   
         } // while (1)
         client_socket.close();
