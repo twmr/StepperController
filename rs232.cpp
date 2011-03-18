@@ -16,14 +16,14 @@ int RS232::rslog(const std::string & logstring, const std::string prefix)
 {
     struct tm *sec;
     std::time_t mytime;
-    char tmp[16];
+    char buf[16];
 
     std::time(&mytime);
 
     sec = localtime(&mytime);
-    strftime(tmp,16, "%y%m%02d %H:%M:%S", sec);
+    strftime(buf,16, "%y%m%02d %H:%M:%S", sec);
 
-    myfilestream << tmp << " | "<< prefix << logstring << std::endl;
+    myfilestream << buf << " | "<< prefix << logstring << std::endl;
     myfilestream << std::flush;
 
     return 0;

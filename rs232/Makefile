@@ -1,12 +1,10 @@
 include ../make.inc
 
-TARGETS= ctbtest ctbread
+TARGETS= ctbtest
 
 default: ${TARGETS}
 
 ctbtest: ctbtest.o
-	$(CC) ${CCFLAGS} -lctb-0.15 $< -o $@
-ctbread: ctbread.o
 	$(CC) ${CCFLAGS} -lctb-0.15 $< -o $@
 
 %.o: %.cpp

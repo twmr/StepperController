@@ -4,19 +4,17 @@ TARGETS= IAP_server IAP_client_cli
 
 default: ${TARGETS}
 
-MAINO= 	tcp_ip/serversock.o \
-	tcp_ip/socket.o \
-	IAPBoard.o \
+MAINO= IAPBoard.o \
 	rs232config.o \
 	IAPconfig.o \
 	rs232.o \
 	ctb.o
 
 IAP_server: IAP_server.o ${MAINO}
-	$(CC)  ${MAINO} ${CCFLAGS} -lctb-0.15 -lboost_regex -lboost_thread-mt $< -o $@
+	$(CC)  ${MAINO} ${CCFLAGS} -lctb-0.15 -lboost_regex -lboost_thread-mt -lboost_system $< -o $@
 
-IAP_client_cli: IAP_client_cli.o tcp_ip/clientsock.o tcp_ip/socket.o
-	$(CC) tcp_ip/clientsock.o tcp_ip/socket.o ${CCFLAGS} $< -o $@
+IAP_client_cli: IAP_client_cli.o
+	$(CC)  ${CCFLAGS} -lboost_system $< -o $@
 
 
 %.o: %.cpp %.hpp

@@ -1,8 +1,9 @@
 #include <iostream>
 #include <cstdio>
 
-#include "tcp_ip/serversock.hpp"
 #include "IAPBoard.hpp"
+
+using namespace std;
 
 IAPBoard::IAPBoard(const RS232config & serialconf, const IAPconfig & axisconf) :
     connected(false),
@@ -21,7 +22,7 @@ IAPBoard::~IAPBoard()
 }
 
 //activate the Steppercontrolboard
-void IAPBoard::connect(ServerSock& sock)
+void IAPBoard::connect(session& sock)
 {
      std::cout << "board: connecting to sctlbrd" << std::endl;
 
@@ -50,10 +51,10 @@ int IAPBoard::send_command_quiet(const std::string & cmd)
 {
     char buffer[1024];
     
-    cout << "send cmd (quiet) called " <<  cmd << endl;
+    std::cout << "send cmd (quiet) called " <<  cmd << std::endl;
     serial_interface->rslog(cmd, "#>");
 
-    string tosend = cmd + "\r\n"; /* maybe not needed */
+    std::string tosend = cmd + "\r\n"; /* maybe not needed */
     while(serial_interface->send(tosend.c_str(), tosend.length()) <= 0 ) {
         sleep(1);
     }
@@ -74,7 +75,7 @@ int IAPBoard::send_command_quiet(const std::string & cmd)
 }
 
 
-void IAPBoard::send_command(ServerSock &sock, const std::string & cmd)
+void IAPBoard::send_command(session &sock, const std::string & cmd)
 {
     char buffer[1024];
     
@@ -91,7 +92,7 @@ void IAPBoard::send_command(ServerSock &sock, const std::string & cmd)
 
     cout << buffer[0] << " " << buffer[1] << " " << strlen(buffer) << " : " << buffer << endl;
     if(buffer[2] == '!'){
-        sock << "CONTROLLER ERROR : " << buffer;
+        sock.async_send("CONTROLLER ERROR"); // FIXME also send buffer;
         serial_interface->rslog(buffer,"CONTROLLER ERROR : ");
         return;
     }
@@ -103,10 +104,10 @@ void IAPBoard::send_command(ServerSock &sock, const std::string & cmd)
 
     if(strlen(buffer) > 2) {
         buffer[strlen(buffer)-2] = '\0';
-        sock << &buffer[3];
+        sock.async_send(&buffer[3]); // FIXME also send buffer;
     }
     else
-        sock << "size of reply from stepper card was too short";
+        sock.async_send("size of reply from stepper card was too short");
 }
 
 int IAPBoard::getaxisnum() const
@@ -128,7 +129,7 @@ static string binary( unsigned long n )
     return string(result);
 }
 
-int IAPBoard::initAxis(ServerSock& sock)
+int IAPBoard::initAxis(session& sock)
 {
     int error;
     unsigned int i;
@@ -202,7 +203,7 @@ int IAPBoard::initAxis(ServerSock& sock)
     return 0;
 }
 
-int IAPBoard::setaxisnum(ServerSock& sock, const unsigned int axisnum, bool quiet=false)
+int IAPBoard::setaxisnum(session& sock, const unsigned int axisnum, bool quiet=false)
 {
     unsigned int curaxisnum  = (curaxis-axis)/sizeof(struct mct_Axis);
 
@@ -213,7 +214,7 @@ int IAPBoard::setaxisnum(ServerSock& sock, const unsigned int axisnum, bool quie
     if(axisnum >= NR_AXIS) {
         cout << " axnium "  << axisnum << " is not a valid axinum" << endl;
         if(!quiet)
-            sock << "INVALID AXIS NUMBER";
+            sock.async_send("INVALID AXIS NUMBER");
             
         return -EINVAL;
     }
@@ -227,7 +228,7 @@ int IAPBoard::setaxisnum(ServerSock& sock, const unsigned int axisnum, bool quie
     return curaxisnum;
 }
 
-void IAPBoard::test(ServerSock &sock)
+void IAPBoard::test(session &sock)
 {
     char buffer[1024];
 
@@ -237,7 +238,7 @@ void IAPBoard::test(ServerSock &sock)
     while(serial_interface->receive(buffer, 1024) <= 0 ) {
         sleep(1);
     }
-    sock << buffer;
+    sock.async_send(buffer);
 }
 
 void IAPBoard::reset()

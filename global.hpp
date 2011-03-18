@@ -10,6 +10,8 @@
  #define STD_TR1 std::tr1
 #endif
 
+#define MSGSIZE 1024
+
 typedef enum {
     UNKNOWN_CMD,
     INVAL_PREFIX,
@@ -20,17 +22,21 @@ typedef enum {
 
 typedef enum {
     MSG_ERROR,
-    MSG_CMD, //command message
-    MSG_REPLY,
-    MSG_SIMPLE
-} msg_code_t;
-    
+    MSG_NONE,
+    MSG_REQUEST, //command message
+    MSG_REPLY
+} msg_type_t;
 
-struct message
+
+typedef struct message
 {
-    msg_code_t code;
-    std::string msg;
-};
-    
+    msg_type_t type;
+    char msg[1024];
+} msg_t;
 
-#endif 
+const size_t msglen = sizeof(msg_t);
+
+const msg_t tmp__ = {MSG_NONE, ""};
+const size_t hdrlen = &(tmp__.msg[0])-(char*)&tmp__;
+
+#endif

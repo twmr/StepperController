@@ -1,9 +1,9 @@
 #ifndef __IAPBoard__
 #define __IAPBoard__
 
+#include "IAP_server.hpp"
 #include "rs232.hpp"
 #include "global.hpp"
-#include "tcp_ip/serversock.hpp"
 #include <mutex>
 
 
@@ -35,14 +35,14 @@ public:
     IAPBoard(const RS232config &, const IAPconfig &);
     ~IAPBoard();
     void reset();
-    void test(ServerSock&);
-    void send_command(ServerSock&,const std::string &);
+    void test(session&);
+    void send_command(session&,const std::string &);
     int send_command_quiet(const std::string &);
-    void connect(ServerSock& );
+    void connect(session&);
     void disconnect();
-    int initAxis(ServerSock&);
+    int initAxis(session&);
     int getaxisnum() const;
-    int setaxisnum(ServerSock&, const unsigned int, bool);
+    int setaxisnum(session&, const unsigned int, bool);
 
     int get_nr_axis(void) const { return NR_AXIS; };
 
