@@ -52,7 +52,6 @@ int IAPBoard::send_command_quiet(const std::string & cmd)
     char buffer[1024];
     
     std::cout << "send cmd (quiet) called " <<  cmd << std::endl;
-    serial_interface->rslog(cmd, "#>");
 
     std::string tosend = cmd + "\r\n"; /* maybe not needed */
     while(serial_interface->send(tosend.c_str(), tosend.length()) <= 0 ) {
@@ -80,7 +79,6 @@ void IAPBoard::send_command(session &sock, const std::string & cmd)
     char buffer[1024];
     
     cout << "send cmd called " <<  cmd << endl;
-    serial_interface->rslog(cmd, "#>");
 
     string tosend = cmd + "\r\n"; /* maybe not needed */
     while(serial_interface->send(tosend.c_str(), tosend.length()) <= 0 ) {
