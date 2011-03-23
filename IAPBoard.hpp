@@ -59,11 +59,11 @@ public:
     void test(session&);
     void send_command(session&,const std::string &);
     int send_command_quiet(const std::string &);
-    void connect(session&);
+    void connect();
     void disconnect();
-    int initAxis(session&);
+    int initAxis();
     int getaxisnum() const;
-    int setaxisnum(session&, const unsigned int, bool);
+    int setaxisnum(const unsigned int);
 
     int get_nr_axis(void) const { return NR_AXIS; };
 

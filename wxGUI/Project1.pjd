@@ -549,8 +549,7 @@
                   <long name="title-mode">0</long>
                   <long name="locked">0</long>
                   <string name="proxy-type">"wbTextCtrlProxy"</string>
-                  <string name="event-handler-0">"wxEVT_COMMAND_TEXT_UPDATED|OnTextctrlTextUpdated|NONE||PM301"</string>
-                  <string name="event-handler-1">"wxEVT_COMMAND_TEXT_ENTER|OnTextctrlEnter|NONE||PM301"</string>
+                  <string name="event-handler-0">"wxEVT_COMMAND_TEXT_ENTER|OnTextctrlEnter|NONE||PM301"</string>
                   <string name="proxy-Id name">"ID_TEXTCTRL"</string>
                   <long name="proxy-Id value">10008</long>
                   <string name="proxy-Name">""</string>
@@ -703,6 +702,7 @@
                   <long name="title-mode">0</long>
                   <long name="locked">0</long>
                   <string name="proxy-type">"wbTextCtrlProxy"</string>
+                  <string name="event-handler-0">"wxEVT_COMMAND_TEXT_ENTER|OnTextctrl1Enter|NONE||PM301"</string>
                   <string name="proxy-Id name">"ID_TEXTCTRL1"</string>
                   <long name="proxy-Id value">10006</long>
                   <string name="proxy-Name">""</string>
@@ -731,7 +731,7 @@
                   <string name="proxy-Data class header filename">""</string>
                   <string name="proxy-Data class manager window">""</string>
                   <bool name="proxy-wxTE_MULTILINE">0</bool>
-                  <bool name="proxy-wxTE_PROCESS_ENTER">0</bool>
+                  <bool name="proxy-wxTE_PROCESS_ENTER">1</bool>
                   <bool name="proxy-wxTE_PROCESS_TAB">0</bool>
                   <bool name="proxy-wxTE_PASSWORD">0</bool>
                   <bool name="proxy-wxTE_READONLY">0</bool>
@@ -855,6 +855,7 @@
                   <long name="title-mode">0</long>
                   <long name="locked">0</long>
                   <string name="proxy-type">"wbTextCtrlProxy"</string>
+                  <string name="event-handler-0">"wxEVT_COMMAND_TEXT_ENTER|OnTextctrl2Enter|NONE||PM301"</string>
                   <string name="proxy-Id name">"ID_TEXTCTRL2"</string>
                   <long name="proxy-Id value">10007</long>
                   <string name="proxy-Name">""</string>
@@ -883,7 +884,7 @@
                   <string name="proxy-Data class header filename">""</string>
                   <string name="proxy-Data class manager window">""</string>
                   <bool name="proxy-wxTE_MULTILINE">0</bool>
-                  <bool name="proxy-wxTE_PROCESS_ENTER">0</bool>
+                  <bool name="proxy-wxTE_PROCESS_ENTER">1</bool>
                   <bool name="proxy-wxTE_PROCESS_TAB">0</bool>
                   <bool name="proxy-wxTE_PASSWORD">0</bool>
                   <bool name="proxy-wxTE_READONLY">0</bool>
@@ -1572,7 +1573,7 @@
                 <string name="proxy-Implementation filename">""</string>
                 <string name="proxy-Header filename">""</string>
                 <string name="proxy-Member variable name">"axradiobox"</string>
-                <string name="proxy-Label">"Radiobox"</string>
+                <string name="proxy-Label">"Axes"</string>
                 <long name="proxy-Major dimension count">1</long>
                 <string name="proxy-Items">"&amp;Axis 1|&amp;Axis 2|&amp;Axis 3"</string>
                 <long name="proxy-Initial value">0</long>

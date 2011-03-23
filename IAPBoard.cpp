@@ -43,14 +43,14 @@ IAPBoard::~IAPBoard()
 }
 
 //activate the Steppercontrolboard
-void IAPBoard::connect(session& sock)
+void IAPBoard::connect()
 {
      std::cout << "board: connecting to sctlbrd" << std::endl;
 
      /* connection commands */
      /* TODO */
 
-     initAxis(sock);
+     initAxis();
      connected = true;
 }
 
@@ -173,7 +173,7 @@ static string binary( unsigned long n )
     return string(result);
 }
 
-int IAPBoard::initAxis(session& sock)
+int IAPBoard::initAxis()
 {
     int error;
     unsigned int i;
@@ -212,7 +212,7 @@ int IAPBoard::initAxis(session& sock)
         printf("Multiplier: %3.2f\n",curaxis->axis_Multiplier);
         printf("\n");
 
-        setaxisnum(sock,i-1,true);
+        setaxisnum(i-1);
 
         sprintf(buf,"1SB%ld",curaxis->axis_BaseSpeed);
         send_command_quiet(buf);
@@ -247,7 +247,7 @@ int IAPBoard::initAxis(session& sock)
     return 0;
 }
 
-int IAPBoard::setaxisnum(session& sock, const unsigned int axisnum, bool quiet=false)
+int IAPBoard::setaxisnum(const unsigned int axisnum)
 {
     unsigned int curaxisnum  = (curaxis-axis)/sizeof(struct mct_Axis);
 
@@ -257,16 +257,19 @@ int IAPBoard::setaxisnum(session& sock, const unsigned int axisnum, bool quiet=f
 
     if(axisnum >= NR_AXIS) {
         cout << " axnium "  << axisnum << " is not a valid axinum" << endl;
-        if(!quiet)
-            sock.async_send("INVALID AXIS NUMBER");
+
+        //FIXME move this to server
+        //if(!quiet)
+        //    sock.async_send("INVALID AXIS NUMBER");
             
         return -EINVAL;
     }
 
-    if(quiet)
-        send_command_quiet("1WP"+binary(axisnum));
-    else
-        send_command(sock, "1WP"+binary(axisnum));
+    //FIXME move verbose send to server
+    //if(quiet)
+    send_command_quiet("1WP"+binary(axisnum));
+    //else
+    //    send_command(sock, "1WP"+binary(axisnum));
 
     curaxis = &axis[axisnum];
     return curaxisnum;

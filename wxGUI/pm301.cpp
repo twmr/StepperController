@@ -45,8 +45,11 @@ IMPLEMENT_CLASS( PM301, wxFrame )
 BEGIN_EVENT_TABLE( PM301, wxFrame )
 
 ////@begin PM301 event table entries
-    EVT_TEXT( ID_TEXTCTRL, PM301::OnTextctrlTextUpdated )
     EVT_TEXT_ENTER( ID_TEXTCTRL, PM301::OnTextctrlEnter )
+
+    EVT_TEXT_ENTER( ID_TEXTCTRL1, PM301::OnTextctrl1Enter )
+
+    EVT_TEXT_ENTER( ID_TEXTCTRL2, PM301::OnTextctrl2Enter )
 
     EVT_CHECKBOX( ID_CHECKBOX, PM301::OnCheckboxClick )
 
@@ -117,18 +120,19 @@ void PM301::Init()
     axradiobox = NULL;
 ////@end PM301 member initialisation
 
-    //std::cout << "lala1" << std::endl;
     tcp::resolver resolver(io_service);
-    //std::cout << "lalaa" << std::endl;
     tcp::resolver::query query(tcp::v4(), "localhost", "15000");
     tcp::resolver::iterator iterator = resolver.resolve(query);
-    //std::cout << "lala2" << std::endl;
     s.connect(*iterator);
-    //std::cout << "lala3" << std::endl;
 
-    //SendMessage("1IR");
-    //SendMessage("sa0");
-    //std::cout << reply.msg << std::endl;
+    coord_limits[0][0] = -10.0;
+    coord_limits[0][1] = 10.0;
+    coord_limits[1][0] = -10.0;
+    coord_limits[1][1] = 10.0;
+    coord_limits[2][0] = -10.0;
+    coord_limits[2][1] = 10.0;
+    
+
 }
 
 
@@ -168,13 +172,13 @@ void PM301::CreateControls()
     wxStaticText* itemStaticText7 = new wxStaticText( itemFrame1, wxID_STATIC, _("y:"), wxDefaultPosition, wxDefaultSize, 0 );
     itemStaticBoxSizer4->Add(itemStaticText7, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    new_y_pos = new wxTextCtrl( itemFrame1, ID_TEXTCTRL1, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+    new_y_pos = new wxTextCtrl( itemFrame1, ID_TEXTCTRL1, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
     itemStaticBoxSizer4->Add(new_y_pos, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
     wxStaticText* itemStaticText9 = new wxStaticText( itemFrame1, wxID_STATIC, _("phi:"), wxDefaultPosition, wxDefaultSize, 0 );
     itemStaticBoxSizer4->Add(itemStaticText9, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    new_phi_pos = new wxTextCtrl( itemFrame1, ID_TEXTCTRL2, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+    new_phi_pos = new wxTextCtrl( itemFrame1, ID_TEXTCTRL2, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
     itemStaticBoxSizer4->Add(new_phi_pos, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
     wxStaticBox* itemStaticBoxSizer11Static = new wxStaticBox(itemFrame1, wxID_ANY, _("current position"));
@@ -216,7 +220,7 @@ void PM301::CreateControls()
     axradioboxStrings.Add(_("&Axis 1"));
     axradioboxStrings.Add(_("&Axis 2"));
     axradioboxStrings.Add(_("&Axis 3"));
-    axradiobox = new wxRadioBox( itemFrame1, ID_RADIOBOX, _("Radiobox"), wxDefaultPosition, wxDefaultSize, axradioboxStrings, 1, wxRA_SPECIFY_COLS );
+    axradiobox = new wxRadioBox( itemFrame1, ID_RADIOBOX, _("Axes"), wxDefaultPosition, wxDefaultSize, axradioboxStrings, 1, wxRA_SPECIFY_COLS );
     axradiobox->SetSelection(0);
     axradiobox->Show(false);
     jogmodelayout->Add(axradiobox, 0, wxGROW, 5);
@@ -224,6 +228,10 @@ void PM301::CreateControls()
 ////@end PM301 content construction
 //std::locale::global(locale(setlocale(LC_ALL, NULL)));
 // m_locale.Init(wxLANGUAGE_DEFAULT, wxLOCALE_LOAD_DEFAULT | wxLOCALE_CONV_ENCODING);
+
+    //SendMessage("gp1");
+    //FIXME unit conversion
+    //new_x_pos->SetValue(wxString::Format(wxT("%f"), atof(reply.msg));
 
 }
 
@@ -288,20 +296,67 @@ void PM301::OnRadioboxSelected( wxCommandEvent& event )
 
 
 
-/*
- * wxEVT_COMMAND_TEXT_UPDATED event handler for ID_TEXTCTRL
- */
 
-void PM301::OnTextctrlTextUpdated( wxCommandEvent& event )
+int PM301::getIdxFromCoord(const std::string &coord)
 {
-    //wxString tmp("oida x")
+    if(coord == "x")
+        return 0;
+    else if(coord == "y")
+        return 1;
+    else if(coord == "phi")
+        return 2;
+    else
+        return -1;
+}
+
+
+void PM301::check_and_update_position(wxTextCtrl* ctrl, const std::string& coord, const double curval)
+{
+    int idx = getIdxFromCoord(coord);
+    bool outofregion = false;
+    bool greatermax = false;
     
-    //wxString tmp2 = wxT("megoo");
-    //wxMessageBox(tmp2, tmp2, wxOK | wxICON_INFORMATION, this);
-    //new_x_pos->SetValue(tmp2);
-    event.Skip();
-    //wxLogMessage(_T("hello"));
-    //std::cout << "helo";
+    if(idx < 0) {
+        wxLogError(wxT("yes"));
+        return;
+    }
+    
+    if(curval > coord_limits[idx][1]) {
+        outofregion = true;
+        greatermax = true;
+    }
+    else if (curval < coord_limits[idx][0]) {
+        outofregion = true;
+        greatermax = false;
+    }
+
+    if(outofregion) {
+        wxString wxcord = wxString::FromAscii(coord.c_str());
+        wxString tmp = wxT("Entered ") + wxcord + wxT(" position (%f) is out of range. Move motor to ") + wxcord + wxT("%s=%f ?");
+        wxString msg = wxString::Format(tmp, curval,
+                                        greatermax ? wxT("max") : wxT("min"),
+                                        greatermax ? coord_limits[idx][1] : coord_limits[idx][0]);
+        
+        wxMessageDialog dialog( NULL, msg,
+                                wxT("Warning"), wxNO_DEFAULT | wxYES_NO | wxICON_INFORMATION);
+        switch(dialog.ShowModal()) {
+        case wxID_YES:
+            //wxLogError(wxT("yes"));
+            //FIXME sendmessage
+            ctrl->SetValue(wxString::Format(wxT("%f"),
+                                            greatermax ? coord_limits[idx][1] : coord_limits[idx][0]));
+            break;
+        case wxID_NO:
+            //wxLogError(wxT("no"));
+            break;
+        default:
+            wxLogError(wxT("Unexpected wxMess Dialog return code!"));
+        }
+    }
+    else {
+        //
+    }
+    
 }
 
 
@@ -311,35 +366,16 @@ void PM301::OnTextctrlTextUpdated( wxCommandEvent& event )
 
 void PM301::OnTextctrlEnter( wxCommandEvent& event )
 {
-    wxString tmp2 = wxT("megoo");
     wxString entered = new_x_pos->GetValue();
 
     double value;
     if(!entered.ToDouble(&value)){
-        wxMessageBox(wxT("not a number"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
+        wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
         //set default value ?!?!?
         return;
     }
-    
-    if(value > x_max || value < x_min) {
-        wxMessageDialog dialog( NULL, wxString::Format(wxT("Entered x position (%f) is out of range. Go to XMAX=%f ?"), value, x_max),
-                                wxT("Warning"), wxNO_DEFAULT | wxYES_NO | wxCANCEL | wxICON_INFORMATION);
-        switch(dialog.ShowModal()) {
-            case wxID_YES:
-                //wxLogError(wxT("yes"));
-                //FIXME sendmessage
-                new_x_pos->SetValue(wxString::Format(wxT("%f"),x_max));
-                break;
-            case wxID_NO:
-                wxLogError(wxT("no"));
-                break;
-            case wxID_CANCEL:
-                wxLogError(wxT("cancel"));
-                break;
-            default:
-                wxLogError(wxT("Unexpected wxMess Dialog return code!"));
-        }
-    }
+
+    check_and_update_position(new_x_pos, std::string("x"), value);
 }
 
 
@@ -360,4 +396,46 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
         
     jogmodelayout->Layout();
 }
+
+
+/*
+ * wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL1
+ */
+
+void PM301::OnTextctrl1Enter( wxCommandEvent& event )
+{
+    wxString entered = new_y_pos->GetValue();
+
+    double value;
+    if(!entered.ToDouble(&value)){
+        wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
+        //set default value ?!?!?
+        return;
+    }
+
+    check_and_update_position(new_y_pos, std::string("y"), value);
+}
+
+
+/*
+ * wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL2
+ */
+
+void PM301::OnTextctrl2Enter( wxCommandEvent& event )
+{
+    wxString entered = new_phi_pos->GetValue();
+
+    double value;
+    if(!entered.ToDouble(&value)){
+        wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
+        //set default value ?!?!?
+        return;
+    }
+
+    check_and_update_position(new_y_pos, std::string("phi"), value);
+}
+
+
+
+
 

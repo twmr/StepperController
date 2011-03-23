@@ -82,11 +82,14 @@ public:
 
 ////@begin PM301 event handler declarations
 
-    /// wxEVT_COMMAND_TEXT_UPDATED event handler for ID_TEXTCTRL
-    void OnTextctrlTextUpdated( wxCommandEvent& event );
-
     /// wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL
     void OnTextctrlEnter( wxCommandEvent& event );
+
+    /// wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL1
+    void OnTextctrl1Enter( wxCommandEvent& event );
+
+    /// wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL2
+    void OnTextctrl2Enter( wxCommandEvent& event );
 
     /// wxEVT_COMMAND_CHECKBOX_CLICKED event handler for ID_CHECKBOX
     void OnCheckboxClick( wxCommandEvent& event );
@@ -106,6 +109,8 @@ public:
 ////@end PM301 member function declarations
 
     void SendMessage(const std::string&); 
+    void check_and_update_position(wxTextCtrl*, const std::string&, const double);
+    int getIdxFromCoord(const std::string &);
 
     /// Should we show tooltips?
     static bool ShowToolTips();
@@ -124,6 +129,7 @@ private:
     boost::asio::ip::tcp::tcp::socket s;
     msg_t request, reply;
     //wxLocale m_locale;
+    double coord_limits[3][2]; //max and min values of the 3 coordinates (x,y,phi)
 };
 
 #endif

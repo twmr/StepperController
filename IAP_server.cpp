@@ -21,6 +21,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <signal.h> //FIXME not available for non unix systems
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
@@ -50,8 +51,10 @@ const char* helpMessage =
 
 };
 
-using boost::asio::ip::tcp;
+/* in this file is the state of the last run stored */
+std::string lastrunfilename("pm301.laststate");
 
+using boost::asio::ip::tcp;
 
 class server
 {
@@ -104,7 +107,7 @@ void session::process_msg(msg_t& message)
     if(! data.compare("connect")) {
         async_send("connecting...");
         // fixme lock this
-        board->connect(*this);
+        board->connect();
         return;
     }
 
@@ -145,11 +148,11 @@ void session::process_msg(msg_t& message)
 
         for (int i = 0; i < board->get_nr_axis(); ++i)
         {
-            board->setaxisnum(*this,i,true);
+            board->setaxisnum(i);
             pos[i] = board->send_command_quiet("1OC");
         }
 
-        board->setaxisnum(*this,oldaxisnum,true);
+        board->setaxisnum(oldaxisnum);
         sprintf(message.msg, " axis1: %d\n axis2: %d\n axis3: %d", pos[0], pos[1], pos[2]);
         return;
     }
@@ -168,7 +171,8 @@ void session::process_msg(msg_t& message)
         axisnum = atoi(std::string(what[2]).c_str());
 
         //std::cout << "axisnum from regex: " << axisnum << std::endl;
-        board->setaxisnum(*this,axisnum,false);
+        board->setaxisnum(axisnum);
+        async_send("TODO return message");
         return;
     }
     boost::regex e2("^[[:digit:]][[:alpha:]]+-?[[:digit:]]*$");
@@ -180,12 +184,33 @@ void session::process_msg(msg_t& message)
 
 }
 
+void catch_int(int sig)
+{
+    std::cout << "writing current state to file" << std::endl;
+    std::ofstream f(lastrunfilename.c_str(), ios_base::out | ios_base::trunc);
+
+    f << 12 << " "<<  3 << " "<< 4 << std::endl;
+    f.close();
+    exit(1);
+}
+
+
+
 int main(int argc, char** argv)
 {
     int ret = 0;
     std::string serialconfigfilename("rsconf");
     std::string axisconfigfilename("axis.cfg");
     //std::vector<boost::shared_ptr<boost::thread> > threads;
+//
+
+    // termios stored_settings;
+    // tcgetattr(0, &stored_settings);
+    // termios new_settings = stored_settings;
+    // new_settings.c_lflag &= (~ISIG); // don't automatically handle control-C
+    // tcsetattr(0, TCSANOW, &new_settings);
+
+    signal(SIGINT, catch_int);
 
     try
     {
@@ -198,9 +223,40 @@ int main(int argc, char** argv)
         cout << "SERVER: init IAPBoard" << endl;
         board = STD_TR1::shared_ptr<IAPBoard>(new IAPBoard(rsconfig,axisconfig));
 
+        std::ifstream f(lastrunfilename.c_str());
+        char cstring[256];
+        int pos[board->get_nr_axis()];
+
+        if( f.is_open() != true) {
+            std::cerr << "couldn't open "<< lastrunfilename << " file"
+                      << std::endl;
+            abort();
+        }
+
+        while (!f.eof())
+        {
+            f.getline(cstring, sizeof(cstring));
+            if (cstring[0] != '#')
+            {
+                stringstream ss(cstring);
+                ss >> pos[0] >> pos[1] >> pos[2];
+                break;
+            }
+        }
+        f.close();
+
+
+        std::cout << "positions from last run:\n\taxis 1: "
+                  << pos[0] << "\n\taxis 2: " << pos[1]
+                  << "\n\taxis 3: " << pos[2] << std::endl;
+
+        board->send_command_quiet("1IR"); // disable jog mode
+        board->initAxis(); // set all axis speed etc.
+        board->send_command_quiet("1WP0000"); // set axis 0
+
+
         boost::asio::io_service io_service;
 
-        using namespace std; // For atoi.
         server s(io_service, IAPServer::port);
 
         io_service.run();
@@ -210,27 +266,6 @@ int main(int argc, char** argv)
         std::cerr << "Exception: " << e.what() << "\n";
     }
 
-
-
-    //try {
-    // ServerSock server ( IAPServer::port );
-    //     while ( true ) {
-    //         ServerSock new_sock;
-    //         server.accept ( new_sock );
-    //         new_sock << "lulu";
-    //         cout << "SERVER: client connected: starting new tcpip thread" << endl;
-    //     }
-    // boost::shared_ptr<boost::thread> thread(new boost::thread(threadTCPIP));
-    //     threads.push_back(thread);
-    // }
-    // catch (SockExcept& e) {
-    //     cout << "Exception was thrown: "
-    //          << e.get_SockExcept() << endl;
-    // }
-
-    // Wait for all threads in the pool to exit.
-    // for (std::size_t i = 0; i < threads.size(); ++i)
-    //     threads[i]->join();
-
+    catch_int(0);
     return ret;
 }
