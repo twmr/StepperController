@@ -67,49 +67,50 @@ void IAPBoard::disconnect()
 }
 
 
-/* returns the integer return code of the command */
-int IAPBoard::send_command_quiet(const std::string & cmd)
+
+/* cmd to be sent is stored in buffer. return string is also
+   returned in buffer */
+void IAPBoard::send_lowlevel(char * buffer, const size_t size)
 {
-    char buffer[1024];
-    
-    std::cout << "send cmd (quiet) called " <<  cmd << std::endl;
+    bool readflag = false;
+    int len = 0;
+    unsigned int idx = 0;
 
-    std::string tosend = cmd + "\r\n"; /* maybe not needed */
-    while(serial_interface->send(tosend.c_str(), tosend.length()) <= 0 ) {
-        sleep(1);
-    }
-    while(serial_interface->receive(buffer, sizeof(buffer)) <= 0 ) {
-        sleep(1);
+    /* write() is assumed to work in one run, as the commands sent
+       to the serial port have a really small size */
+    serial_interface->send(buffer, strlen(buffer));
+
+    while(len <= 0 || readflag) {
+        usleep(50000);
+
+        //cout << "db1" << endl;
+        len = serial_interface->receive(&buffer[idx], size-idx);
+        //cout << "db2 len " << len << endl;
+        if(len <= 0) {
+            //cout << "db3" << endl;
+            if(readflag) break;
+        }
+        else {
+            //cout << "db4" << endl;
+            readflag = true;
+            idx += len;
+        }
     }
 
-    if(buffer[2] == '!'){
-        serial_interface->rslog(buffer,"CONTROLLER ERROR : ");
-        //FIXME error code
-        return -1;
-    }
+    cout << buffer[0] << " " << buffer[1] << " " << strlen(buffer)
+         << " : " << buffer << endl;
 
-    if(strlen(buffer) > 2) {
-        buffer[strlen(buffer)-2] = '\0';
-    }
-    return atoi(&buffer[3]);
 }
-
 
 void IAPBoard::send_command(session &sock, const std::string & cmd)
 {
-    char buffer[1024];
-    
-    cout << "send cmd called " <<  cmd << endl;
+    static char buffer[1024];
 
-    string tosend = cmd + "\r\n"; /* maybe not needed */
-    while(serial_interface->send(tosend.c_str(), tosend.length()) <= 0 ) {
-        sleep(1);
-    }
-    while(serial_interface->receive(buffer, sizeof(buffer)) <= 0 ) {
-        sleep(1);
-    }
+    std::cout << "send cmd called " <<  cmd << std::endl;
+    sprintf(buffer, "%s\r\n", cmd.c_str());
 
-    cout << buffer[0] << " " << buffer[1] << " " << strlen(buffer) << " : " << buffer << endl;
+    send_lowlevel(buffer, sizeof(buffer));
+
     if(buffer[2] == '!'){
         sock.async_send("CONTROLLER ERROR"); // FIXME also send buffer;
         serial_interface->rslog(buffer,"CONTROLLER ERROR : ");
@@ -127,6 +128,30 @@ void IAPBoard::send_command(session &sock, const std::string & cmd)
     }
     else
         sock.async_send("size of reply from stepper card was too short");
+}
+
+/* returns the integer return code of the command */
+/* the return code of this function should only be used for commands
+   which return an interger value */
+
+int IAPBoard::send_command_quiet(const std::string & cmd) {
+    static char buffer[1024];
+
+    std::cout << "send cmd (quiet) called " <<  cmd << std::endl;
+    sprintf(buffer, "%s\r\n", cmd.c_str());
+
+    send_lowlevel(buffer, sizeof(buffer));
+
+    if(buffer[2] == '!'){
+        serial_interface->rslog(buffer,"CONTROLLER ERROR : ");
+        //FIXME error code
+        return -1;
+    }
+
+    if(strlen(buffer) > 2) {
+        buffer[strlen(buffer)-2] = '\0';
+    }
+    return atoi(&buffer[3]);
 }
 
 int IAPBoard::getaxisnum() const

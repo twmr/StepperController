@@ -68,6 +68,7 @@ public:
     int get_nr_axis(void) const { return NR_AXIS; };
 
 private:
+    void send_lowlevel(char * buffer, const size_t size);
     static const unsigned int NR_AXIS = 3;  // 3 axis are currently controlled by the IAP Board
     bool connected;
     STD_TR1::shared_ptr< RS232 > serial_interface;
