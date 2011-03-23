@@ -21,6 +21,7 @@
 
 #include <iostream>
 #include <cstdio>
+#include <limits>
 
 #include "IAPBoard.hpp"
 
@@ -45,25 +46,25 @@ IAPBoard::~IAPBoard()
 //activate the Steppercontrolboard
 void IAPBoard::connect()
 {
-     std::cout << "board: connecting to sctlbrd" << std::endl;
+    std::cout << "board: connecting to sctlbrd" << std::endl;
 
-     /* connection commands */
-     /* TODO */
+    /* connection commands */
+    /* TODO */
 
-     initAxis();
-     connected = true;
+    initAxis();
+    connected = true;
 }
 
 
 //shut down the Steppercontrolboard to prevent overheating of the steppermotors
 void IAPBoard::disconnect()
 {
-     std::cout << "board: disconnecting from sctlbrd" << std::endl;
+    std::cout << "board: disconnecting from sctlbrd" << std::endl;
 
-     /* disconnection commands */
-     /* TODO */
+    /* disconnection commands */
+    /* TODO */
 
-     connected = false;
+    connected = false;
 }
 
 
@@ -102,7 +103,7 @@ void IAPBoard::send_lowlevel(char * buffer, const size_t size)
 
 }
 
-void IAPBoard::send_command(session &sock, const std::string & cmd)
+int IAPBoard::send_command(const std::string & cmd, char* reply)
 {
     static char buffer[1024];
 
@@ -111,10 +112,9 @@ void IAPBoard::send_command(session &sock, const std::string & cmd)
 
     send_lowlevel(buffer, sizeof(buffer));
 
-    if(buffer[2] == '!'){
-        sock.async_send("CONTROLLER ERROR"); // FIXME also send buffer;
-        serial_interface->rslog(buffer,"CONTROLLER ERROR : ");
-        return;
+    if(buffer[2] == '!') {
+        serial_interface->rslog(buffer,"CONTROLLER ERROR ");
+        return -E_PM301_ERROR_MSG;
     }
 
     // if(buffer[0] == ' ') {
@@ -122,12 +122,13 @@ void IAPBoard::send_command(session &sock, const std::string & cmd)
     //     return;
     // }
 
-    if(strlen(buffer) > 2) {
+    if(strlen(buffer) > 2 && reply) {
         buffer[strlen(buffer)-2] = '\0';
-        sock.async_send(&buffer[3]); // FIXME also send buffer;
+        strcpy(reply,&buffer[3]);
+        return 0;
     }
     else
-        sock.async_send("size of reply from stepper card was too short");
+        return -E_SIZE_PM301_REPLY_SHORT;
 }
 
 /* returns the integer return code of the command */
@@ -135,23 +136,28 @@ void IAPBoard::send_command(session &sock, const std::string & cmd)
    which return an interger value */
 
 int IAPBoard::send_command_quiet(const std::string & cmd) {
+    return send_command(cmd, NULL);
+}
+
+int IAPBoard::send_getint_command(const std::string & cmd) {
     static char buffer[1024];
 
-    std::cout << "send cmd (quiet) called " <<  cmd << std::endl;
+    std::cout << "send getint cmd called " <<  cmd << std::endl;
     sprintf(buffer, "%s\r\n", cmd.c_str());
 
     send_lowlevel(buffer, sizeof(buffer));
 
     if(buffer[2] == '!'){
         serial_interface->rslog(buffer,"CONTROLLER ERROR : ");
-        //FIXME error code
-        return -1;
+        return std::numeric_limits<int>::min();
     }
 
     if(strlen(buffer) > 2) {
         buffer[strlen(buffer)-2] = '\0';
+        return atoi(&buffer[3]);
     }
-    return atoi(&buffer[3]);
+    else
+        return std::numeric_limits<int>::min();
 }
 
 int IAPBoard::getaxisnum() const
@@ -275,17 +281,19 @@ int IAPBoard::setaxisnum(const unsigned int axisnum)
     return curaxisnum;
 }
 
-void IAPBoard::test(session &sock)
+void IAPBoard::test(char *msg)
 {
-    char buffer[1024];
+    //FIXME reimplement test function
+    
+    //char buffer[1024];
 
-    //waits for incoming dota, if no data arrives blocks forever
-    serial_interface->rslog(" serial test", "#>");
+    // //waits for incoming dota, if no data arrives blocks forever
+    // serial_interface->rslog(" serial test", "#>");
 
-    while(serial_interface->receive(buffer, 1024) <= 0 ) {
-        sleep(1);
-    }
-    sock.async_send(buffer);
+    // while(serial_interface->receive(buffer, 1024) <= 0 ) {
+    //     sleep(1);
+    // }
+    // sock.async_send(buffer);
 }
 
 void IAPBoard::reset()

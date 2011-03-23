@@ -58,9 +58,14 @@ public:
     /* process_msg triggers functions which call async_send
      * async_send just copies data into the private data_ message object
      */
-    void async_send(const std::string& str) {
+    void prepare_tcp_message(const std::string& str) {
         strcpy(data_.msg, str.c_str());
         data_.type = MSG_REPLY;
+    }
+
+    void prepare_tcp_err_message(const std::string& str) {
+        strcpy(data_.msg, str.c_str());
+        data_.type = MSG_ERROR;
     }
 
 

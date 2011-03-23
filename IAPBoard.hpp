@@ -22,10 +22,23 @@
 #ifndef __IAPBoard__
 #define __IAPBoard__
 
-#include "IAP_server.hpp"
 #include "rs232.hpp"
 #include "global.hpp"
 #include <mutex>
+
+
+typedef enum{
+    E_DUMMY=0,
+    E_PM301_ERROR_MSG,
+    E_SIZE_PM301_REPLY_SHORT,
+    E_LAST
+} pm301_err_t;
+
+static const char* pm301_err_string[E_LAST] = {
+    "this should't be printed - probably a bug in this software",
+    "PM301 returned error message",
+    "size of reply from stepper card was too short"
+};
 
 
 class IAPconfig {
@@ -56,9 +69,10 @@ public:
     IAPBoard(const RS232config &, const IAPconfig &);
     ~IAPBoard();
     void reset();
-    void test(session&);
-    void send_command(session&,const std::string &);
+    void test(char*);
+    int send_command(const std::string &, char* reply);
     int send_command_quiet(const std::string &);
+    int send_getint_command(const std::string &);
     void connect();
     void disconnect();
     int initAxis();
@@ -66,7 +80,7 @@ public:
     int setaxisnum(const unsigned int);
 
     int get_nr_axis(void) const { return NR_AXIS; };
-
+    const char *get_err_string(pm301_err_t type) { return pm301_err_string[type]; };
 private:
     void send_lowlevel(char * buffer, const size_t size);
     static const unsigned int NR_AXIS = 3;  // 3 axis are currently controlled by the IAP Board

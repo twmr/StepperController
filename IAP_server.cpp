@@ -98,90 +98,103 @@ void session::process_msg(msg_t& message)
     //cout << "Got Command: " << message.msg << endl;
     string data(message.msg);
     message.type = MSG_REPLY;
+    int ret = 0;
 
     if(! data.compare("help")) {
-        async_send(helpMessage);
-        return;
+        prepare_tcp_message(helpMessage);
     }
-
-    if(! data.compare("connect")) {
-        async_send("connecting...");
+    else if(! data.compare("connect")) {
+        prepare_tcp_message("connecting...");
         // fixme lock this
         board->connect();
-        return;
     }
-
-    if(! data.compare("disconnect")) {
+    else if(! data.compare("disconnect")) {
         // fixme lock this
         board->disconnect();
-        async_send("disconnected");
-        return;
+        prepare_tcp_message("disconnected");
     }
-
-    if(! data.compare("serialtest")) {
+    else if(! data.compare("serialtest")) {
         // fixme lock this
-        board->test(*this);
-        return;
+        board->test(message.msg);
     }
-
-    if(! data.compare("close")) {
-        async_send("stopping current session");
+    else if(! data.compare("close")) {
+        prepare_tcp_message("stopping current session");
         //FIXME
         //delete new_session;
     }
-
-    if(! data.compare("enjog")) {
+    else if(! data.compare("enjog")) {
         //enable jog mode
-        board->send_command(*this, "1AR");
-        return;
+        ret = board->send_command("1AR", message.msg);
+        if(ret < 0) {
+            prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+        }
     }
-    if(! data.compare("disjog")) {
+    else if(! data.compare("disjog")) {
         //disable jog mode
-        board->send_command(*this, "1IR");
-        return;
+        ret = board->send_command("1IR", message.msg);
+        if(ret < 0) {
+            prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+        }
     }
-
-    if(! data.compare("pp")) {
+    else if(! data.compare("pp")) {
         //print positions
         int pos[board->get_nr_axis()];
         int oldaxisnum = board->getaxisnum();
 
         for (int i = 0; i < board->get_nr_axis(); ++i)
         {
-            board->setaxisnum(i);
-            pos[i] = board->send_command_quiet("1OC");
+            ret = board->setaxisnum(i);
+            if(ret < 0) {
+                prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+                return;
+            }
+
+            pos[i] = board->send_getint_command("1OC");
         }
 
-        board->setaxisnum(oldaxisnum);
+        ret = board->setaxisnum(oldaxisnum);
+        if(ret < 0) {
+            prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+            return;
+        }
         sprintf(message.msg, " axis1: %d\n axis2: %d\n axis3: %d", pos[0], pos[1], pos[2]);
-        return;
     }
+    else {
+        /* all other commads */
 
-    //boost::regex e("^(setaxisnum )|(sa)([0-2])$");
-    boost::regex e("^(sa)([[:digit:]])$");
-    boost::smatch what;
-    if(boost::regex_match(data, what, e, boost::match_extra))
-    {
-        unsigned int axisnum;
+        //boost::regex e("^(setaxisnum )|(sa)([0-2])$");
+        boost::regex e("^(sa)([[:digit:]])$");
+        boost::smatch what;
+        if(boost::regex_match(data, what, e, boost::match_extra))
+        {
+            unsigned int axisnum;
 
-        if(what.size() < 3)
-            std::cerr << "not a valid regexp match (whole match " << what[0] <<
-                " )" << std::endl;
+            if(what.size() < 3)
+                std::cerr << "not a valid regexp match (whole match " << what[0] <<
+                    " )" << std::endl;
 
-        axisnum = atoi(std::string(what[2]).c_str());
+            axisnum = atoi(std::string(what[2]).c_str());
 
-        //std::cout << "axisnum from regex: " << axisnum << std::endl;
-        board->setaxisnum(axisnum);
-        async_send("TODO return message");
-        return;
+            //std::cout << "axisnum from regex: " << axisnum << std::endl;
+            ret = board->setaxisnum(axisnum);
+            if(ret < 0)
+                prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+            else
+                prepare_tcp_message("TODO return message");
+            return;
+        }
+
+        boost::regex e2("^[[:digit:]][[:alpha:]]+-?[[:digit:]]*$");
+
+        if(boost::regex_match(data, what, e2, boost::match_extra)) {
+            ret = board->send_command(data,message.msg);
+            if(ret < 0)
+                prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+            return;
+        }
+        else
+            prepare_tcp_message("invalid command (check syntax)");
     }
-    boost::regex e2("^[[:digit:]][[:alpha:]]+-?[[:digit:]]*$");
-
-    if(boost::regex_match(data, what, e2, boost::match_extra))
-        board->send_command(*this, data);
-    else
-        async_send("invalid command (check syntax)");
-
 }
 
 void catch_int(int sig)
@@ -201,14 +214,6 @@ int main(int argc, char** argv)
     int ret = 0;
     std::string serialconfigfilename("rsconf");
     std::string axisconfigfilename("axis.cfg");
-    //std::vector<boost::shared_ptr<boost::thread> > threads;
-//
-
-    // termios stored_settings;
-    // tcgetattr(0, &stored_settings);
-    // termios new_settings = stored_settings;
-    // new_settings.c_lflag &= (~ISIG); // don't automatically handle control-C
-    // tcsetattr(0, TCSANOW, &new_settings);
 
     signal(SIGINT, catch_int);
 
