@@ -112,6 +112,10 @@ public:
     void check_and_update_position(wxTextCtrl*, const std::string&, const double);
     int getIdxFromCoord(const std::string &);
 
+    /* unit conversion functions */
+    float convert_to_natural_units(const int pos, const std::string &coord) const;
+    int convert_to_stepper_units(const float pos, const std::string &coord) const;
+
     /// Should we show tooltips?
     static bool ShowToolTips();
 
@@ -130,6 +134,11 @@ private:
     msg_t request, reply;
     //wxLocale m_locale;
     double coord_limits[3][2]; //max and min values of the 3 coordinates (x,y,phi)
+
+    //FIXME insert correct values
+    static const float x_unit_conv = 2.0;
+    static const float y_unit_conv = 2.0;
+    static const float phi_unit_conv = 2.0;
 };
 
 #endif

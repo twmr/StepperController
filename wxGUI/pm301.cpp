@@ -295,6 +295,29 @@ void PM301::OnRadioboxSelected( wxCommandEvent& event )
 
 
 
+int PM301::convert_to_stepper_units(const float pos, const std::string &coord) const
+{
+    if(coord == "x")
+        return (int)pos/x_unit_conv;
+    else if(coord == "y")
+        return (int)pos/y_unit_conv;
+    else if(coord == "phi")
+        return (int)pos/phi_unit_conv;
+    else
+        return -1;
+}
+
+float PM301::convert_to_natural_units(const int pos, const std::string &coord) const
+{
+    if(coord == "x")
+        return pos*x_unit_conv;
+    else if(coord == "y")
+        return pos*y_unit_conv;
+    else if(coord == "phi")
+        return pos*phi_unit_conv;
+    else
+        return -1.0;
+}
 
 
 int PM301::getIdxFromCoord(const std::string &coord)
