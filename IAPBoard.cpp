@@ -22,10 +22,9 @@
 #include <iostream>
 #include <cstdio>
 #include <limits>
+#include <boost/lexical_cast.hpp>
 
 #include "IAPBoard.hpp"
-
-using namespace std;
 
 IAPBoard::IAPBoard(const RS232config & serialconf, const IAPconfig & axisconf) :
     connected(false),
@@ -98,8 +97,8 @@ void IAPBoard::send_lowlevel(char * buffer, const size_t size)
         }
     }
 
-    cout << buffer[0] << " " << buffer[1] << " " << strlen(buffer)
-         << " : " << buffer << endl;
+    std::cout << buffer[0] << " " << buffer[1] << " " << strlen(buffer)
+              << " : " << buffer << std::endl;
 
 }
 
@@ -165,44 +164,46 @@ int IAPBoard::getaxisnum() const
     return (curaxis-axis)/sizeof(struct mct_Axis);
 }
 
-static string binary( unsigned long n )
-{
-    char     result[ 4 + 1 ];
-    unsigned index  = 4;
-    result[ index ] = '\0';
+// static std::string binary( unsigned long n )
+// {
+//     char     result[ 4 + 1 ];
+//     unsigned index  = 4;
+//     result[ index ] = '\0';
 
-    do {
-        result[ --index ] = '0' + (n & 1);
-        n >>= 1;
-    } while (index);
+//     do {
+//         result[ --index ] = '0' + (n & 1);
+//         n >>= 1;
+//     } while (index);
 
-    return string(result);
-}
+//     return std::string(result);
+// }
 
 int IAPBoard::initAxis()
 {
     int error;
     unsigned int i;
     struct mct_Axis *curaxis;
-    char axstr[4], buf[80];
+    char axstr_[4], buf[80];
+    std::string axstr;;
     
     error = 0;
     
     for(i=1; i <= NR_AXIS; ++i){
-        snprintf(axstr,4, "<%d>",i);
+        snprintf(axstr_,4, "<%d>",i);
         curaxis = &axis[i-1];
+        axstr = axstr_;
         
-        curaxis->axis_BaseSpeed = axisconfig.get_int_param("BaseSpeed"+string(axstr));
-        curaxis->axis_SlewSpeed = axisconfig.get_int_param("SlewSpeed"+string(axstr));
-        curaxis->axis_SlowJogSpeed = axisconfig.get_int_param("SlowJogSpeed"+string(axstr));
-        curaxis->axis_FastJogSpeed = axisconfig.get_int_param("FastJogSpeed"+string(axstr));
-        curaxis->axis_CreepSteps = axisconfig.get_int_param("CreepSteps"+string(axstr));
-        curaxis->axis_Accel = axisconfig.get_int_param("Accel"+string(axstr));
-        curaxis->axis_LowerLimit = axisconfig.get_int_param("LowerLimit"+string(axstr));
-        curaxis->axis_UpperLimit = axisconfig.get_int_param("UpperLimit"+string(axstr));
-        curaxis->axis_Position = axisconfig.get_int_param("Position"+string(axstr));
-        curaxis->axis_MotorStatus = axisconfig.get_int_param("MotorStatus"+string(axstr));
-        curaxis->axis_Multiplier = axisconfig.get_double_param("Multiplier"+string(axstr));
+        curaxis->axis_BaseSpeed = axisconfig.get_int_param("BaseSpeed"+axstr);
+        curaxis->axis_SlewSpeed = axisconfig.get_int_param("SlewSpeed"+axstr);
+        curaxis->axis_SlowJogSpeed = axisconfig.get_int_param("SlowJogSpeed"+axstr);
+        curaxis->axis_FastJogSpeed = axisconfig.get_int_param("FastJogSpeed"+axstr);
+        curaxis->axis_CreepSteps = axisconfig.get_int_param("CreepSteps"+axstr);
+        curaxis->axis_Accel = axisconfig.get_int_param("Accel"+axstr);
+        curaxis->axis_LowerLimit = axisconfig.get_int_param("LowerLimit"+axstr);
+        curaxis->axis_UpperLimit = axisconfig.get_int_param("UpperLimit"+axstr);
+        curaxis->axis_Position = axisconfig.get_int_param("Position"+axstr);
+        curaxis->axis_MotorStatus = axisconfig.get_int_param("MotorStatus"+axstr);
+        curaxis->axis_Multiplier = axisconfig.get_double_param("Multiplier"+axstr);
 
         printf("Axis # %d\n",i);
         printf("BaseSpeed: %ld\n",curaxis->axis_BaseSpeed);
@@ -257,12 +258,12 @@ int IAPBoard::setaxisnum(const unsigned int axisnum)
 {
     unsigned int curaxisnum  = (curaxis-axis)/sizeof(struct mct_Axis);
 
-    cout << "curaxis " << curaxisnum << " axisnum " << axisnum << endl;
+    std::cout << "curaxis " << curaxisnum << " axisnum " << axisnum << std::endl;
     
     //if (axisnum == curaxisnum) return - 1;
 
     if(axisnum >= NR_AXIS) {
-        cout << " axnium "  << axisnum << " is not a valid axinum" << endl;
+        std::cout << " axnium "  << axisnum << " is not a valid axinum" << std::endl;
 
         //FIXME move this to server
         //if(!quiet)
@@ -273,9 +274,9 @@ int IAPBoard::setaxisnum(const unsigned int axisnum)
 
     //FIXME move verbose send to server
     //if(quiet)
-    send_command_quiet("1WP"+binary(axisnum));
+    send_command_quiet("1CH" + boost::lexical_cast<std::string>(axisnum+1));
     //else
-    //    send_command(sock, "1WP"+binary(axisnum));
+    //    send_command(sock, "1WP"binary(axisnum));
 
     curaxis = &axis[axisnum];
     return curaxisnum;
@@ -298,5 +299,5 @@ void IAPBoard::test(char *msg)
 
 void IAPBoard::reset()
 {
- std::cout << "board: reset" << std::endl;
+    std::cout << "board: reset" << std::endl;
 }

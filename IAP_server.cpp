@@ -257,7 +257,7 @@ int main(int argc, char** argv)
 
         board->send_command_quiet("1IR"); // disable jog mode
         board->initAxis(); // set all axis speed etc.
-        board->send_command_quiet("1WP0000"); // set axis 0
+        board->send_command_quiet("1CH1"); // set axis 1
 
 
         boost::asio::io_service io_service;
