@@ -38,7 +38,8 @@ int main(int argc, char* argv[])
     try
     {
         if( argc < 2 ){
-            std::cout << "Usage: " << *argv << " server-hostname  [cmd-file]" << std::endl;
+            std::cout << "Usage: " << *argv << " server-hostname [batch-file]"
+                      << std::endl;
             return 1;
         }
 
@@ -46,7 +47,7 @@ int main(int argc, char* argv[])
         std::string cmd;
         std::ifstream f;
 
-        bool read_cmd_list = false;
+        bool batch_mode = false;
         bool send_single_cmd = false;
         msg_t request, reply;
 
@@ -56,8 +57,8 @@ int main(int argc, char* argv[])
             f.close();
             if(f.fail()) {
                 send_single_cmd = true;
-            }else
-            {
+            }
+            else {
                 f.clear(std::ios::failbit);
                 f.open(argv[2], std::ifstream::in);
 
@@ -66,9 +67,8 @@ int main(int argc, char* argv[])
                     std::cerr << "couldn't open " <<argv[2] << std::endl;
                     return 1;
                 }
-                read_cmd_list = true;
+                batch_mode = true;
             }
-
         }
 
         boost::asio::io_service io_service;
@@ -89,31 +89,29 @@ int main(int argc, char* argv[])
             return 0;
         }
 
-
-        using namespace std; // For strlen.
-
         while(true) {
             std::cout << "#> ";
 
-            if(read_cmd_list) {
+            if(batch_mode) {
                 f >> cmd;
                 if(f.eof()) break;
                 std::cout << cmd << std::endl;
             } else
             {
+                // interactive mode
                 std::cin.getline(request.msg, MSGSIZE);
                 cmd=request.msg;
-            }
 
-            if(!cmd.compare("quit") || !cmd.compare("q")) {
-                /* disconnect from tcp/ip server */
-                break;
+                if(!cmd.compare("quit") || !cmd.compare("q")) {
+                    /* disconnect from tcp/ip server */
+                    break;
+                }
             }
 
             if(!cmd.length()) // empty string
                 continue;
 
-            if(read_cmd_list)
+            if(batch_mode)
                 strcpy(request.msg, cmd.c_str());
 
 
