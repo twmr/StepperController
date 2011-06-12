@@ -25,6 +25,8 @@
 #include <string>
 #include <iostream>
 #include <boost/asio.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "global.hpp"
 #include "IAP_server.hpp"
@@ -110,6 +112,18 @@ int main(int argc, char* argv[])
 
             if(!cmd.length()) // empty string
                 continue;
+
+
+            try {
+                if (boost::starts_with(cmd, "sleep ")) {
+                    int sleep_value = boost::lexical_cast<int>(cmd.substr(6));
+                    std::cout << "sleeping for " << sleep_value << " seconds" << std::endl;
+                    sleep(sleep_value);
+                }
+            } catch (std::bad_cast) {
+                // bad parameter
+                std::cerr << "bad sleep parameter" << std::endl;
+            }
 
             if(batch_mode)
                 strcpy(request.msg, cmd.c_str());

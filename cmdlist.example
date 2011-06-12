@@ -1,3 +1,8 @@
 help
-disconnect
+sa2
+sa1
+set axis 2
+set jog
+sleep 10
+unset jog
 1IR

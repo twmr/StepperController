@@ -26,9 +26,11 @@
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 #include <boost/regex.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "IAP_server.hpp"
 #include "IAPBoard.hpp"
+#include "rs232.hpp"
 
 using namespace std;
 
@@ -39,20 +41,19 @@ const char* helpMessage =
 {
     "HELP:\n"
     "available commands are:\n"
-    "quit       : quit the client\n"
-    "close      : stop the current session\n"
-    "connect    : start up stepperboard\n"
-    "disconnect : shut down stepperboard\n"
-    "serialtest : test rs232 communication\n"
+    "quit          : quit the client\n" //implemented in the client
+    "close         : stop the current session\n"
+    "serialtest    : test rs232 communication\n"
     "\n"
-    "saN        : setaxis where N is the axisnumber [0-2]\n"
-    "enjog | disjog  enable or disable jog mode\n"
-    "pp         : print positions of all motors"
+    "sleep N       : sleep N seconds\n" //implemented in the client
+    "set axis N    : setaxis where N is the axisnumber [0-2]\n"
+    "set/unset jog : enable or disable jog mode\n"
+    "pp            : print positions of all motors"
 
 };
 
 /* in this file is the state of the last run stored */
-std::string lastrunfilename("pm301.laststate");
+std::string lastrunfilename("pm381.laststate");
 
 using boost::asio::ip::tcp;
 
@@ -103,16 +104,6 @@ void session::process_msg(msg_t& message)
     if(! data.compare("help")) {
         prepare_tcp_message(helpMessage);
     }
-    else if(! data.compare("connect")) {
-        prepare_tcp_message("connecting...");
-        // fixme lock this
-        board->connect();
-    }
-    else if(! data.compare("disconnect")) {
-        // fixme lock this
-        board->disconnect();
-        prepare_tcp_message("disconnected");
-    }
     else if(! data.compare("serialtest")) {
         // fixme lock this
         board->test(message.msg);
@@ -121,20 +112,6 @@ void session::process_msg(msg_t& message)
         prepare_tcp_message("stopping current session");
         //FIXME
         //delete new_session;
-    }
-    else if(! data.compare("enjog")) {
-        //enable jog mode
-        ret = board->send_command("1AR", message.msg);
-        if(ret < 0) {
-            prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
-        }
-    }
-    else if(! data.compare("disjog")) {
-        //disable jog mode
-        ret = board->send_command("1IR", message.msg);
-        if(ret < 0) {
-            prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
-        }
     }
     else if(! data.compare("pp")) {
         //print positions
@@ -162,8 +139,36 @@ void session::process_msg(msg_t& message)
     else {
         /* all other commads */
 
+        //check set/unset commands
+        if (boost::starts_with(data, "set ")) {
+            std::string setvar = data.substr(4);
+            std::cout << "setting " << setvar << std::endl;
+
+            if(! setvar.compare("jog")) {
+                //enable jog mode
+                ret = board->send_command("1AR", message.msg);
+                if(ret < 0)
+                    prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+            }
+            else
+                prepare_tcp_message("invalid set command (check syntax)");
+        }
+        if (boost::starts_with(data, "unset ")) {
+            std::string unsetvar = data.substr(6);
+            std::cout << "unsetting " << unsetvar << std::endl;
+
+            if(! unsetvar.compare("jog")) {
+                //disable jog mode
+                ret = board->send_command("1IR", message.msg);
+                if(ret < 0)
+                    prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+            }
+            else
+                prepare_tcp_message("invalid unset command (check syntax)");
+        }
+
         //boost::regex e("^(setaxisnum )|(sa)([0-2])$");
-        boost::regex e("^(sa)([[:digit:]])$");
+        boost::regex e("^(sa|set axis )([[:digit:]])$");
         boost::smatch what;
         if(boost::regex_match(data, what, e, boost::match_extra))
         {

@@ -22,10 +22,10 @@
 #ifndef __IAPBoard__
 #define __IAPBoard__
 
-#include "rs232.hpp"
 #include "global.hpp"
+#include "exceptions.hpp"
 #include <mutex>
-
+#include <map>
 
 typedef enum{
     E_DUMMY=0,
@@ -40,6 +40,9 @@ static const char* pm301_err_string[E_LAST] = {
     "size of reply from stepper card was too short"
 };
 
+/* forward declatrions */
+class RS232;
+class RS232config;
 
 class IAPconfig {
 public:

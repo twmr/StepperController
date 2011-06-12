@@ -25,6 +25,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "IAPBoard.hpp"
+#include "rs232.hpp"
 
 IAPBoard::IAPBoard(const RS232config & serialconf, const IAPconfig & axisconf) :
     connected(false),
@@ -192,7 +193,7 @@ int IAPBoard::initAxis()
         snprintf(axstr_,4, "<%d>",i);
         curaxis = &axis[i-1];
         axstr = axstr_;
-        
+
         curaxis->axis_BaseSpeed = axisconfig.get_int_param("BaseSpeed"+axstr);
         curaxis->axis_SlewSpeed = axisconfig.get_int_param("SlewSpeed"+axstr);
         curaxis->axis_SlowJogSpeed = axisconfig.get_int_param("SlowJogSpeed"+axstr);

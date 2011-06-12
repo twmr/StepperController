@@ -45,7 +45,7 @@ void sctl_ctb::open()
 
     if( ! device ) {
         std::cerr << "Cannot open " <<  rsconfig.get_string_param("devname")  << std::endl;
-        abort();
+        exit(1);
     }
     std::cout << "opened " <<  rsconfig.get_string_param("devname")  << std::endl;
 }
