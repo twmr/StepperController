@@ -19,9 +19,9 @@ IAP_client_cli: IAP_client_cli.o
 
 
 %.o: %.cpp %.hpp
-	${CC} $< ${CCFLAGS} -I. -c -o $@
+	${CC} $< ${CCFLAGS} -Iinclude -c -o $@
 %.o: %.cpp 
-	${CC} $< ${CCFLAGS} -I. -c -o $@
+	${CC} $< ${CCFLAGS} -Iinclude -c -o $@
 
 
 clean:
