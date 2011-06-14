@@ -20,10 +20,12 @@
  */
 
 #include "IAPBoard.hpp"
-#include <stdlib.h>
 #include <string>
+#include <cstring>
+#include <iostream>
+#include <fstream>
 
-IAPconfig::IAPconfig(const std::string & configfile)
+IAPconfig::IAPconfig(const std::string& configfile)
 {
     std::ifstream f(configfile.c_str());
     char cstring[256];

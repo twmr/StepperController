@@ -8,6 +8,7 @@ MAINO= IAPBoard.o \
 	rs232config.o \
 	IAPconfig.o \
 	rs232.o \
+	helper.o \
 	ctb.o
 
 IAP_server: IAP_server.o ${MAINO}

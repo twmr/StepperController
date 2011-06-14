@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
             std::cout << "#> ";
 
             if(batch_mode) {
-                f >> cmd;
+                getline(f,cmd);
                 if(f.eof()) break;
                 std::cout << cmd << std::endl;
             } else
@@ -119,6 +119,7 @@ int main(int argc, char* argv[])
                     int sleep_value = boost::lexical_cast<int>(cmd.substr(6));
                     std::cout << "sleeping for " << sleep_value << " seconds" << std::endl;
                     sleep(sleep_value);
+                    continue;
                 }
             } catch (std::bad_cast) {
                 // bad parameter

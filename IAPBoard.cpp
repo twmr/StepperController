@@ -23,13 +23,43 @@
 #include <cstdio>
 #include <limits>
 #include <boost/lexical_cast.hpp>
+#include <boost/regex.hpp>
 
 #include "IAPBoard.hpp"
 #include "rs232.hpp"
 
+
+void  ConversionConstants::get_bare_position(BarePosition& ret, const Position &pos) const
+{
+    ret.x_ = static_cast<BarePosition::type>(pos.x_/xconv_);
+    ret.y_ = static_cast<BarePosition::type>(pos.y_/yconv_);
+    ret.theta_ = static_cast<BarePosition::type>(pos.theta_/thetaconv_);
+}
+
+void ConversionConstants::get_position(Position& ret, const BarePosition &bpos) const
+{
+    ret.x_ = bpos.x_*xconv_;
+    ret.y_ = bpos.y_*yconv_;
+    ret.theta_ = bpos.theta_*thetaconv_;
+}
+
+void ConversionConstants::set_constants(const std::vector<double>& cvec)
+{
+    if(cvec.size() < 3){
+        std::cerr << "WARNING: vector length in set_constants too small" << std::endl;
+        return;
+    }
+
+    xconv_ = cvec[0];
+    yconv_ = cvec[1];
+    thetaconv_ = cvec[2];
+}
+
+
 IAPBoard::IAPBoard(const RS232config & serialconf, const IAPconfig & axisconf) :
     connected(false),
     serial_interface(STD_TR1::shared_ptr< RS232 >(new sctl_ctb(serialconf))),
+    convconsts(STD_TR1::shared_ptr< ConversionConstants >(new ConversionConstants())),
     axisconfig(axisconf),
     curaxis(&axis[0])
 {
@@ -48,10 +78,13 @@ void IAPBoard::connect()
 {
     std::cout << "board: connecting to sctlbrd" << std::endl;
 
-    /* connection commands */
-    /* TODO */
-
+    //set number of axis
+    send_command_quiet("1NC" + boost::lexical_cast<std::string>(NR_AXIS));
+    std::cout << "\tset number of axis" << std::endl;
     initAxis();
+    send_command_quiet("1CH1"); // set axis 1
+    send_command_quiet("1IR"); // disable jog mode
+
     connected = true;
 }
 
@@ -71,7 +104,7 @@ void IAPBoard::disconnect()
 
 /* cmd to be sent is stored in buffer. return string is also
    returned in buffer */
-void IAPBoard::send_lowlevel(char * buffer, const size_t size)
+void IAPBoard::send_lowlevel(char * buffer, const size_t size) const
 {
     bool readflag = false;
     int len = 0;
@@ -103,7 +136,9 @@ void IAPBoard::send_lowlevel(char * buffer, const size_t size)
 
 }
 
-int IAPBoard::send_command(const std::string & cmd, char* reply)
+// sends cmd to stepper board and return reply string if return value
+// is 0 otherwise just return error code
+int IAPBoard::send_command(const std::string & cmd, char* reply) const
 {
     static char buffer[1024];
 
@@ -114,7 +149,7 @@ int IAPBoard::send_command(const std::string & cmd, char* reply)
 
     if(buffer[2] == '!') {
         serial_interface->rslog(buffer,"CONTROLLER ERROR ");
-        return -E_PM301_ERROR_MSG;
+        return -E_PM381_ERROR_MSG;
     }
 
     // if(buffer[0] == ' ') {
@@ -128,18 +163,21 @@ int IAPBoard::send_command(const std::string & cmd, char* reply)
         return 0;
     }
     else
-        return -E_SIZE_PM301_REPLY_SHORT;
+        return -E_SIZE_PM381_REPLY_SHORT;
 }
 
 /* returns the integer return code of the command */
 /* the return code of this function should only be used for commands
    which return an interger value */
 
-int IAPBoard::send_command_quiet(const std::string & cmd) {
+// TODO remove this function and use a default value for reply in send_command
+int IAPBoard::send_command_quiet(const std::string & cmd) const
+{
     return send_command(cmd, NULL);
 }
 
-int IAPBoard::send_getint_command(const std::string & cmd) {
+int IAPBoard::send_getint_command(const std::string & cmd) const
+{
     static char buffer[1024];
 
     std::cout << "send getint cmd called " <<  cmd << std::endl;
@@ -164,20 +202,6 @@ int IAPBoard::getaxisnum() const
 {
     return (curaxis-axis)/sizeof(struct mct_Axis);
 }
-
-// static std::string binary( unsigned long n )
-// {
-//     char     result[ 4 + 1 ];
-//     unsigned index  = 4;
-//     result[ index ] = '\0';
-
-//     do {
-//         result[ --index ] = '0' + (n & 1);
-//         n >>= 1;
-//     } while (index);
-
-//     return std::string(result);
-// }
 
 int IAPBoard::initAxis()
 {
@@ -251,7 +275,7 @@ int IAPBoard::initAxis()
     }
 
     //FIXME check every output of the previous send_commands
-    
+
     return 0;
 }
 
@@ -260,7 +284,7 @@ int IAPBoard::setaxisnum(const unsigned int axisnum)
     unsigned int curaxisnum  = (curaxis-axis)/sizeof(struct mct_Axis);
 
     std::cout << "curaxis " << curaxisnum << " axisnum " << axisnum << std::endl;
-    
+
     //if (axisnum == curaxisnum) return - 1;
 
     if(axisnum >= NR_AXIS) {
@@ -269,19 +293,101 @@ int IAPBoard::setaxisnum(const unsigned int axisnum)
         //FIXME move this to server
         //if(!quiet)
         //    sock.async_send("INVALID AXIS NUMBER");
-            
+
         return -EINVAL;
     }
 
     //FIXME move verbose send to server
-    //if(quiet)
     send_command_quiet("1CH" + boost::lexical_cast<std::string>(axisnum+1));
-    //else
-    //    send_command(sock, "1WP"binary(axisnum));
 
     curaxis = &axis[axisnum];
     return curaxisnum;
 }
+
+
+void IAPBoard::move_rel(const Position& rel)
+{
+    BarePosition bp;
+    convconsts.get()->get_bare_position(bp, rel);
+    move_rel(bp);
+}
+
+//TODO implement/check SOFT_LIMITS
+void IAPBoard::move_rel(const BarePosition& rel)
+{
+    const int curaxis = getaxisnum();
+    setaxisnum(0);
+    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.x_));
+    setaxisnum(1);
+    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.y_));
+    setaxisnum(2);
+    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.theta_));
+    setaxisnum(curaxis);
+}
+
+void IAPBoard::move_to(const Position& abs)
+{
+    BarePosition bp;
+    convconsts.get()->get_bare_position(bp, abs);
+    move_to(bp);
+}
+
+//TODO implement/check SOFT_LIMITS
+void IAPBoard::move_to(const BarePosition& abs)
+{
+    const int curaxis = getaxisnum();
+    setaxisnum(0);
+    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.x_));
+    setaxisnum(1);
+    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.y_));
+    setaxisnum(2);
+    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.theta_));
+    setaxisnum(curaxis);
+}
+
+
+void IAPBoard::get_cur_position(BarePosition& retbarepos) const
+{
+    //only for PM381
+    char buf[128];
+    send_command("1QP",buf);
+    const std::string line(buf);
+    std::vector<BarePosition::type> vals(get_nr_axis());
+    const boost::regex re("= [-]?\\d+");
+
+    // for(size_t i=0; i < line.length(); ++i)
+    // {
+    //     printf("%d:%02x ",i,(unsigned char)line[i]);
+    //     if(line[i] == '\n' || line[i] == '\r')
+    //         line[i] = ' ';
+    // }
+
+    boost::sregex_token_iterator tokens(line.begin(),line.end(),re);
+    boost::sregex_token_iterator end;
+
+    for (size_t i=0; i < 3; i++, ++tokens){
+        if(tokens == end) {
+            std::cerr << "WARNING: parsing in get_cur_position failed" << std::endl;
+            return;
+        }
+
+        std::cout << "gcp tokens: " << *tokens << std::endl;
+        std::stringstream tmp(tokens->str().substr(1));
+        tmp >> vals[i];
+        // vals[i] = boost::lexical_cast<BarePosition::type>(tokens->str().substr(1));
+    }
+    retbarepos.x_ = vals[0];
+    retbarepos.y_ = vals[1];
+    retbarepos.theta_ = vals[2];
+}
+
+void IAPBoard::get_cur_position(Position& retpos) const
+{
+    BarePosition bp;
+    get_cur_position(bp);
+    convconsts.get()->get_position(retpos, bp);
+}
+
 
 void IAPBoard::test(char *msg)
 {

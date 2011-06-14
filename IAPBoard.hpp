@@ -22,27 +22,85 @@
 #ifndef __IAPBoard__
 #define __IAPBoard__
 
-#include "global.hpp"
-#include "exceptions.hpp"
+#include <boost/tuple/tuple.hpp>
 #include <mutex>
 #include <map>
+#include "global.hpp"
+#include "exceptions.hpp"
+#include <iostream>
 
 typedef enum{
     E_DUMMY=0,
-    E_PM301_ERROR_MSG,
-    E_SIZE_PM301_REPLY_SHORT,
+    E_PM381_ERROR_MSG,
+    E_SIZE_PM381_REPLY_SHORT,
     E_LAST
-} pm301_err_t;
+} pm381_err_t;
 
-static const char* pm301_err_string[E_LAST] = {
+static const char* pm381_err_string[E_LAST] = {
     "this should't be printed - probably a bug in this software",
-    "PM301 returned error message",
+    "PM381 returned error message",
     "size of reply from stepper card was too short"
 };
 
 /* forward declatrions */
 class RS232;
 class RS232config;
+
+
+template <typename T>
+class DummyPosition
+{
+public:
+    DummyPosition()
+        { };
+
+    DummyPosition(T x, T y, T t) :
+        x_(x), y_(y), theta_(t)
+        { };
+
+    DummyPosition(const boost::tuple<T,T,T>& tp) :
+        x_(tp.get(0)), y_(tp.get(1)), theta_(tp.get(2))
+        { };
+
+    DummyPosition(const std::vector<T>& tvec) :
+        x_(tvec[0]), y_(tvec[1]), theta_(tvec[2])
+        { };
+
+    void PrintPosition() const
+        {
+            std::cout << "Position: ( x: " << x_ << " y: " << y_ << " theta: "
+                      << theta_ << " )" << std::endl;
+        };
+
+
+    typedef T type;
+    T x_;
+    T y_;
+    T theta_;
+};
+
+typedef DummyPosition<short> BarePosition; //units that the stepper board understands
+typedef DummyPosition<float> Position; //units that we understand
+
+class ConversionConstants
+{
+public:
+    ConversionConstants() :
+        xconv_(1.0), yconv_(1.0), thetaconv_(1.0)
+        { };
+
+    ConversionConstants(double xc, double yc, double thetac) :
+        xconv_(xc), yconv_(yc), thetaconv_(thetac)
+        { };
+
+    void get_bare_position(BarePosition& ret, const Position &pos) const;
+    void get_position(Position& ret, const BarePosition &bpos) const;
+    void set_constants(const std::vector<double>& cvec);
+    double xconv_;
+    double yconv_;
+    double thetaconv_;
+};
+
 
 class IAPconfig {
 public:
@@ -71,25 +129,40 @@ class IAPBoard {
 public:
     IAPBoard(const RS232config &, const IAPconfig &);
     ~IAPBoard();
+
+    int send_command(const std::string &, char* reply) const;
+    int send_command_quiet(const std::string &) const;
+    int send_getint_command(const std::string &) const;
+
     void reset();
     void test(char*);
-    int send_command(const std::string &, char* reply);
-    int send_command_quiet(const std::string &);
-    int send_getint_command(const std::string &);
     void connect();
     void disconnect();
     int initAxis();
     int getaxisnum() const;
     int setaxisnum(const unsigned int);
+    STD_TR1::shared_ptr<ConversionConstants> getConversionConstants() const
+        { return convconsts; };
+
+    void move_rel(const Position& deltaPos);
+    void move_to(const Position& absPos);
+    void move_rel(const BarePosition& deltaPos);
+    void move_to(const BarePosition& absPos);
+
+    void get_cur_position(BarePosition& retbarepos) const;
+    void get_cur_position(Position& retpos) const;
+
+    bool is_connected() { return connected; };
 
     int get_nr_axis(void) const { return NR_AXIS; };
-    const char *get_err_string(pm301_err_t type) { return pm301_err_string[type]; };
+    const char *get_err_string(pm381_err_t type) { return pm381_err_string[type]; };
 private:
-    void send_lowlevel(char * buffer, const size_t size);
+    void send_lowlevel(char * buffer, const size_t size) const;
     static const unsigned int NR_AXIS = 3;  // 3 axis are currently controlled by the IAP Board
     bool connected;
     STD_TR1::shared_ptr< RS232 > serial_interface;
     STD_TR1::shared_ptr< std::mutex > boardmutex;
+    STD_TR1::shared_ptr<ConversionConstants> convconsts;
     const IAPconfig &axisconfig;
 
     struct mct_Axis {

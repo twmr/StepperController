@@ -26,11 +26,15 @@
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 #include <boost/regex.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/tuple/tuple.hpp>
+#include <boost/tuple/tuple_io.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "IAP_server.hpp"
 #include "IAPBoard.hpp"
 #include "rs232.hpp"
+#include "helper.hpp"
 
 using namespace std;
 
@@ -48,7 +52,12 @@ const char* helpMessage =
     "sleep N       : sleep N seconds\n" //implemented in the client
     "set axis N    : setaxis where N is the axisnumber [0-2]\n"
     "set/unset jog : enable or disable jog mode\n"
-    "pp            : print positions of all motors"
+    "mr a,b,c      : move relative a,b,c are real numbers\n"
+    "ma a,b,c      : move absolute a,b,c are real numbers\n"
+    "printconvconsts       : print the conversion constants\n"
+    "set convconsts a,b,c  : setthe conversion constants\n"
+    "pp            : print positions of all motors in user defined units\n"
+    "pbp           : print bare positions of all motors (stepperboard units)"
 
 };
 
@@ -113,28 +122,33 @@ void session::process_msg(msg_t& message)
         //FIXME
         //delete new_session;
     }
-    else if(! data.compare("pp")) {
-        //print positions
-        int pos[board->get_nr_axis()];
-        int oldaxisnum = board->getaxisnum();
+    else if(! data.compare("pbp")) {
+        //print bare positions
+        const int oldaxisnum = board->getaxisnum();
 
-        for (int i = 0; i < board->get_nr_axis(); ++i)
-        {
-            ret = board->setaxisnum(i);
-            if(ret < 0) {
-                prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
-                return;
-            }
-
-            pos[i] = board->send_getint_command("1OC");
-        }
+        BarePosition bp;
+        board->get_cur_position(bp);
 
         ret = board->setaxisnum(oldaxisnum);
         if(ret < 0) {
-            prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+            prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
             return;
         }
-        sprintf(message.msg, " axis1: %d\n axis2: %d\n axis3: %d", pos[0], pos[1], pos[2]);
+        sprintf(message.msg, " axis1: %d\n axis2: %d\n axis3: %d", bp.x_, bp.y_, bp.theta_);
+    }
+    else if(! data.compare("pp")) {
+        //print positions
+        const int oldaxisnum = board->getaxisnum();
+
+        Position p;
+        board->get_cur_position(p);
+
+        ret = board->setaxisnum(oldaxisnum);
+        if(ret < 0) {
+            prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
+            return;
+        }
+        sprintf(message.msg, " axis1: %f\n axis2: %f\n axis3: %f", p.x_, p.y_, p.theta_);
     }
     else {
         /* all other commads */
@@ -148,10 +162,11 @@ void session::process_msg(msg_t& message)
                 //enable jog mode
                 ret = board->send_command("1AR", message.msg);
                 if(ret < 0)
-                    prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+                    prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
             }
             else
                 prepare_tcp_message("invalid set command (check syntax)");
+            return;
         }
         if (boost::starts_with(data, "unset ")) {
             std::string unsetvar = data.substr(6);
@@ -161,10 +176,39 @@ void session::process_msg(msg_t& message)
                 //disable jog mode
                 ret = board->send_command("1IR", message.msg);
                 if(ret < 0)
-                    prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+                    prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
             }
             else
                 prepare_tcp_message("invalid unset command (check syntax)");
+            return;
+        }
+
+        // movement commands
+        if (boost::starts_with(data, "ma ")) { // move absolute
+            std::string tmp = data.substr(3);
+            std::vector<Position::type> posvec(3);
+
+            if(!helper::parse_triple<Position::type>(tmp, posvec)) {
+                board->move_to(Position(Position(posvec)));
+                prepare_tcp_message("Success");
+            }
+            else
+                prepare_tcp_message("parse_triple_failure");
+
+            return;
+        }
+        else if (boost::starts_with(data, "mr ")) { // move relative
+            std::string tmp = data.substr(3);
+            std::vector<Position::type> posvec(3);
+
+            if(!helper::parse_triple<Position::type>(tmp, posvec)) {
+                board->move_rel(Position(Position(posvec)));
+                prepare_tcp_message("Success");
+            }
+            else
+                prepare_tcp_message("parse_triple_failure");
+
+            return;
         }
 
         //boost::regex e("^(setaxisnum )|(sa)([0-2])$");
@@ -183,7 +227,7 @@ void session::process_msg(msg_t& message)
             //std::cout << "axisnum from regex: " << axisnum << std::endl;
             ret = board->setaxisnum(axisnum);
             if(ret < 0)
-                prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+                prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
             else
                 prepare_tcp_message("TODO return message");
             return;
@@ -194,7 +238,7 @@ void session::process_msg(msg_t& message)
         if(boost::regex_match(data, what, e2, boost::match_extra)) {
             ret = board->send_command(data,message.msg);
             if(ret < 0)
-                prepare_tcp_err_message(board->get_err_string(static_cast<pm301_err_t>(-ret)));
+                prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
             return;
         }
         else
@@ -204,10 +248,14 @@ void session::process_msg(msg_t& message)
 
 void catch_int(int sig)
 {
-    std::cout << "writing current state to file" << std::endl;
-    std::ofstream f(lastrunfilename.c_str(), ios_base::out | ios_base::trunc);
+    if(!board->is_connected())
+        exit(1);
 
-    f << 12 << " "<<  3 << " "<< 4 << std::endl;
+    BarePosition bp;
+    board->get_cur_position(bp);
+    std::cout << "writing current state to file" << lastrunfilename << std::endl;
+    std::ofstream f(lastrunfilename.c_str(), ios_base::out | ios_base::trunc);
+    f << bp.x_ << ", "<<  bp.y_ << ", "<< bp.theta_ << std::endl;
     f.close();
     exit(1);
 }
@@ -217,7 +265,7 @@ void catch_int(int sig)
 int main(int argc, char** argv)
 {
     int ret = 0;
-    std::string serialconfigfilename("rsconf");
+    const std::string serialconfigfilename("rsconf");
     std::string axisconfigfilename("axis.cfg");
 
     signal(SIGINT, catch_int);
@@ -233,37 +281,42 @@ int main(int argc, char** argv)
         cout << "SERVER: init IAPBoard" << endl;
         board = STD_TR1::shared_ptr<IAPBoard>(new IAPBoard(rsconfig,axisconfig));
 
-        std::ifstream f(lastrunfilename.c_str());
-        char cstring[256];
-        int pos[board->get_nr_axis()];
+        //sets up axis,...
+        board->connect();
 
-        if( f.is_open() != true) {
-            std::cerr << "couldn't open "<< lastrunfilename << " file"
+        std::ifstream f(lastrunfilename.c_str(), ifstream::in);
+        if (f) {
+            char cstring[256];
+            std::vector<BarePosition::type> posvec(3);
+            std::cout << "reading position from "<< lastrunfilename << " file"
                       << std::endl;
-            abort();
-        }
 
-        while (!f.eof())
-        {
-            f.getline(cstring, sizeof(cstring));
-            if (cstring[0] != '#')
+            while (!f.eof())
             {
-                stringstream ss(cstring);
-                ss >> pos[0] >> pos[1] >> pos[2];
-                break;
+                f.getline(cstring, sizeof(cstring));
+                if (cstring[0] != '#')
+                {
+                    string s(cstring);
+                    std::cout << s << endl;
+                    int ret =  helper::parse_triple(s,posvec);
+                    if(ret < 0)
+                    {
+                        std::cerr << "ERROR: parse_triple returned " << ret << std::endl;
+                    }
+
+                    BarePosition bp(posvec);
+                    std::cout << "bare positions from last run:"
+                              << "\n\taxis 1: " << bp.x_
+                              << "\n\taxis 2: " << bp.y_
+                              << "\n\taxis 3: " << bp.theta_ << std::endl;
+                    std::cout << "move to it ....";
+                    board->move_to(bp);
+                    std::cout << " done" << std::endl;
+                    break;
+                }
             }
+            f.close();
         }
-        f.close();
-
-
-        std::cout << "positions from last run:\n\taxis 1: "
-                  << pos[0] << "\n\taxis 2: " << pos[1]
-                  << "\n\taxis 3: " << pos[2] << std::endl;
-
-        board->send_command_quiet("1IR"); // disable jog mode
-        board->initAxis(); // set all axis speed etc.
-        board->send_command_quiet("1CH1"); // set axis 1
-
 
         boost::asio::io_service io_service;
 
