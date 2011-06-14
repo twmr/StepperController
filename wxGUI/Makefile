@@ -33,13 +33,13 @@ LIBPATH=
 CPPINC:=$(shell $(WXWIN)/GCCBuildReleaseGTK2Unicode/wx-config --inplace --cxxflags)
 GCCFLAGS=
 LDFLAGS=$(LIBS) $(LIBPATH) $(LINKERFLAGS)
-CPPFLAGS=$(CPPINC) $(GCCFLAGS) $(DEBUGFLAGS) $(OPTFLAGS) $(WARNINGFLAGS) -DUSE_BOOST -std=c++0x
+CPPFLAGS=$(CPPINC) $(GCCFLAGS) $(DEBUGFLAGS) $(OPTFLAGS) $(WARNINGFLAGS) -DUSE_BOOST #-std=c++0x
 LIBDIRNAME=$(WXWIN)/GCCBuildReleaseGTK2Unicode/lib
 RESPATH=--include-dir "$(WXWIN)/include" --include-dir "$(WXWIN)/contrib/include" --include-dir "$(WXWIN)/GCCBuildReleaseGTK2Unicode/lib/wx/include/gtk2-unicode-release-static-2.8"
 MACPACKAGEINFO=
 endif
 
-OBJECTS=$(OBJECTPATH)/iap_gui_app.o $(OBJECTPATH)/pm301.o $(RESOURCEOBJECT)
+OBJECTS=$(OBJECTPATH)/iap_gui_app.o $(OBJECTPATH)/pm301.o $(OBJECTPATH)/unitconversionconstants.o $(RESOURCEOBJECT)
 
 all:	$(BUILDPATHS) $(MACPACKAGEINFO) $(OUTPUTPATH)/$(PROGRAM)
 
@@ -77,11 +77,14 @@ $(OUTPUTPATH)/$(PROGRAM).app/Contents/PkgInfo: $(OUTPUTPATH)/$(PROGRAM) $(INFOPL
 	ln -f $(OUTPUTPATH)/$(PROGRAM) $(OUTPUTPATH)/$(PROGRAM).app/Contents/MacOS/$(PROGRAM)
 	cp -f $(ICNSSOURCE) $(ICNSDEST)
 
-$(OBJECTPATH)/iap_gui_app.o:	iap_gui_app.cpp iap_gui_app.hpp pm301.h
+$(OBJECTPATH)/iap_gui_app.o:	iap_gui_app.cpp iap_gui_app.hpp pm301.h ../global.hpp
 	$(CXX) -c -o $@ $(CPPFLAGS) iap_gui_app.cpp
 
-$(OBJECTPATH)/pm301.o:	pm301.cpp pm301.h ../IAP_server.hpp ../global.hpp
+$(OBJECTPATH)/pm301.o:	pm301.cpp pm301.h ../global.hpp unitconversionconstants.h ../IAP_server.hpp
 	$(CXX) -c -o $@ $(CPPFLAGS) pm301.cpp
+
+$(OBJECTPATH)/unitconversionconstants.o:	unitconversionconstants.cpp unitconversionconstants.h pm301.h ../global.hpp
+	$(CXX) -c -o $@ $(CPPFLAGS) unitconversionconstants.cpp
 
 .PHONY:	all clean
 ### End DialogBlocks generated body
