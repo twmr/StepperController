@@ -22,11 +22,11 @@
 #ifndef __IAPBoard__
 #define __IAPBoard__
 
-#include <boost/tuple/tuple.hpp>
 #include <mutex>
 #include <map>
 #include "global.hpp"
 #include "exceptions.hpp"
+#include "position.hpp"
 #include <iostream>
 
 typedef enum{
@@ -45,61 +45,6 @@ static const char* pm381_err_string[E_LAST] = {
 /* forward declatrions */
 class RS232;
 class RS232config;
-
-
-template <typename T>
-class DummyPosition
-{
-public:
-    DummyPosition()
-        { };
-
-    DummyPosition(T x, T y, T t) :
-        x_(x), y_(y), theta_(t)
-        { };
-
-    DummyPosition(const boost::tuple<T,T,T>& tp) :
-        x_(tp.get(0)), y_(tp.get(1)), theta_(tp.get(2))
-        { };
-
-    DummyPosition(const std::vector<T>& tvec) :
-        x_(tvec[0]), y_(tvec[1]), theta_(tvec[2])
-        { };
-
-    void PrintPosition() const
-        {
-            std::cout << "Position: ( x: " << x_ << " y: " << y_ << " theta: "
-                      << theta_ << " )" << std::endl;
-        };
-
-
-    typedef T type;
-    T x_;
-    T y_;
-    T theta_;
-};
-
-typedef DummyPosition<short> BarePosition; //units that the stepper board understands
-typedef DummyPosition<float> Position; //units that we understand
-
-class ConversionConstants
-{
-public:
-    ConversionConstants() :
-        xconv_(1.0), yconv_(1.0), thetaconv_(1.0)
-        { };
-
-    ConversionConstants(double xc, double yc, double thetac) :
-        xconv_(xc), yconv_(yc), thetaconv_(thetac)
-        { };
-
-    void get_bare_position(BarePosition& ret, const Position &pos) const;
-    void get_position(Position& ret, const BarePosition &bpos) const;
-    void set_constants(const std::vector<double>& cvec);
-    double xconv_;
-    double yconv_;
-    double thetaconv_;
-};
 
 
 class IAPconfig {
@@ -138,7 +83,7 @@ public:
     void test(char*);
     void connect();
     void disconnect();
-    int initAxis();
+    int initAxes();
     int getaxisnum() const;
     int setaxisnum(const unsigned int);
     STD_TR1::shared_ptr<ConversionConstants> getConversionConstants() const

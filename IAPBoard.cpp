@@ -78,10 +78,16 @@ void IAPBoard::connect()
 {
     std::cout << "board: connecting to sctlbrd" << std::endl;
 
-    //set number of axis
+    char buf[32];
+    send_command("1ID", buf);
+    std::cout << "FIRMWARE Version: " << buf << std::endl;
+
+    std::cout << "set number of channels to : " << NR_AXIS << std::endl;
     send_command_quiet("1NC" + boost::lexical_cast<std::string>(NR_AXIS));
-    std::cout << "\tset number of axis" << std::endl;
-    initAxis();
+
+    std::cout << "initialize axes parameters" << std::endl;
+    initAxes();
+
     send_command_quiet("1CH1"); // set axis 1
     send_command_quiet("1IR"); // disable jog mode
 
@@ -117,22 +123,22 @@ void IAPBoard::send_lowlevel(char * buffer, const size_t size) const
     while(len <= 0 || readflag) {
         usleep(50000);
 
-        //cout << "db1" << endl;
+        //std::cout << "db1" << std::endl;
         len = serial_interface->receive(&buffer[idx], size-idx);
-        //cout << "db2 len " << len << endl;
+        //std::cout << "db2 len " << len << std::endl;
         if(len <= 0) {
-            //cout << "db3" << endl;
+            //std::cout << "db3" << std::endl;
             if(readflag) break;
         }
         else {
-            //cout << "db4" << endl;
+            //std::cout << "db4" << std::endl;
             readflag = true;
             idx += len;
         }
     }
 
-    std::cout << buffer[0] << " " << buffer[1] << " " << strlen(buffer)
-              << " : " << buffer << std::endl;
+    std::cout <<  "len = " << strlen(buffer)
+              << " buf: " << buffer << std::endl;
 
 }
 
@@ -142,7 +148,7 @@ int IAPBoard::send_command(const std::string & cmd, char* reply) const
 {
     static char buffer[1024];
 
-    std::cout << "send cmd called " <<  cmd << std::endl;
+    std::cout << "rs232 send cmd called " <<  cmd << std::endl;
     sprintf(buffer, "%s\r\n", cmd.c_str());
 
     send_lowlevel(buffer, sizeof(buffer));
@@ -203,7 +209,7 @@ int IAPBoard::getaxisnum() const
     return (curaxis-axis)/sizeof(struct mct_Axis);
 }
 
-int IAPBoard::initAxis()
+int IAPBoard::initAxes()
 {
     int error;
     unsigned int i;
@@ -270,8 +276,12 @@ int IAPBoard::initAxis()
         sprintf(buf,"1UL%ld",curaxis->axis_UpperLimit);
         send_command_quiet(buf);
 
-        sprintf(buf,"1SP%ld",curaxis->axis_Position);
-        send_command_quiet(buf);
+        //Disable this atm
+        //TODO create write cfg file function which writes the current axis setup to a file!
+        //call this function when the server is killed, shutdown, ...
+        //store the conversion constants also in this file
+        //sprintf(buf,"1SP%ld",curaxis->axis_Position);
+        //send_command_quiet(buf);
     }
 
     //FIXME check every output of the previous send_commands

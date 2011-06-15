@@ -24,10 +24,10 @@
 #include "wx/statusbr.h"
 #include "wx/toolbar.h"
 ////@end includes
-#include "../global.hpp"
-#include <boost/asio.hpp>
+#include "wx/socket.h"
 #include "wx/thread.h"
 #include "wx/textfile.h"
+#include "../include/global.hpp"
 
 /*!
  * Forward declarations
@@ -35,6 +35,7 @@
 
 ////@begin forward declarations
 class wxBoxSizer;
+class wxSpinCtrl;
 class wxStatusBar;
 ////@end forward declarations
 class UnitConversionConstants;
@@ -48,11 +49,8 @@ class UnitConversionConstants;
 #define ID_MENUITEM 10002
 #define ID_MENUITEM1 10020
 #define ID_MENUITEM2 10021
-#define ID_TEXTCTRL 10008
 #define ID_SPINCTRL 10003
-#define ID_TEXTCTRL1 10006
 #define ID_SPINCTRL1 10010
-#define ID_TEXTCTRL2 10007
 #define ID_SPINCTRL2 10009
 #define ID_CHECKBOX 10004
 #define ID_RADIOBOX 10005
@@ -65,9 +63,10 @@ class UnitConversionConstants;
 #define SYMBOL_PM301_STYLE wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxCLOSE_BOX
 #define SYMBOL_PM301_TITLE _("PM301")
 #define SYMBOL_PM301_IDNAME ID_PM301
-#define SYMBOL_PM301_SIZE wxSize(500, 500)
+#define SYMBOL_PM301_SIZE wxSize(400, 330)
 #define SYMBOL_PM301_POSITION wxDefaultPosition
 ////@end control identifiers
+#define SOCKET_ID 9980
 
 //FIXME mention unit of variables
 #define x_min 0.9
@@ -132,14 +131,14 @@ public:
     /// wxEVT_COMMAND_MENU_SELECTED event handler for ID_MENUITEM2
     void OnPositionUpdateClick( wxCommandEvent& event );
 
-    /// wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL
-    void OnTextctrlEnter( wxCommandEvent& event );
+    /// wxEVT_COMMAND_SPINCTRL_UPDATED event handler for ID_SPINCTRL
+    void OnSpinctrlUpdated( wxSpinEvent& event );
 
-    /// wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL1
-    void OnTextctrl1Enter( wxCommandEvent& event );
+    /// wxEVT_COMMAND_SPINCTRL_UPDATED event handler for ID_SPINCTRL1
+    void OnSpinctrl1Updated( wxSpinEvent& event );
 
-    /// wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL2
-    void OnTextctrl2Enter( wxCommandEvent& event );
+    /// wxEVT_COMMAND_SPINCTRL_UPDATED event handler for ID_SPINCTRL2
+    void OnSpinctrl2Updated( wxSpinEvent& event );
 
     /// wxEVT_COMMAND_CHECKBOX_CLICKED event handler for ID_CHECKBOX
     void OnCheckboxClick( wxCommandEvent& event );
@@ -157,6 +156,7 @@ public:
     void OnStatusbarUpdate( wxUpdateUIEvent& event );
 
 ////@end PM301 event handler declarations
+    void OnSocketEvent( wxSocketEvent& event );
 
 ////@begin PM301 member function declarations
 
@@ -171,12 +171,14 @@ public:
     void SendMessage(const std::string&); 
     void SendMessage(const char *); 
     void send();
-    void check_and_update_position(wxTextCtrl*, const std::string&, const double);
-    int getIdxFromCoord(const std::string &);
+    void check_and_update_position(wxSpinCtrl*, const wxString&, const double);
+    int getIdxFromCoord(const wxString&);
 
     /* unit conversion functions */
-    float convert_to_natural_units(const int pos, const std::string &coord) const;
-    int convert_to_stepper_units(const float pos, const std::string &coord) const;
+    float convert_to_natural_units(const int pos, const wxString &coord) const;
+    int convert_to_stepper_units(const float pos, const wxString &coord) const;
+    
+    void GeneralSpinCtrlUpdate(const wxString& coord);
     
     //
     void ToggleBatchMode(void);
@@ -187,9 +189,9 @@ public:
 ////@begin PM301 member variables
     wxBoxSizer* mainswitcher;
     wxBoxSizer* basiccontrol;
-    wxTextCtrl* new_x_pos;
-    wxTextCtrl* new_y_pos;
-    wxTextCtrl* new_phi_pos;
+    wxSpinCtrl* xSpinCtrl;
+    wxSpinCtrl* ySpinCtrl;
+    wxSpinCtrl* tSpinCtrl;
     wxBoxSizer* jogmodelayout;
     wxCheckBox* checkjog;
     wxRadioBox* axradiobox;
@@ -201,8 +203,7 @@ public:
     Position getcurpos();
 
 private:
-    boost::asio::io_service io_service;
-    boost::asio::ip::tcp::tcp::socket s;
+    wxSocketClient* s;
     msg_t request, reply;
     //wxLocale m_locale;
     double coord_limits[3][2]; //max and min values of the 3 coordinates (x,y,phi)

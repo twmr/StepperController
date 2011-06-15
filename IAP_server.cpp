@@ -124,34 +124,56 @@ void session::process_msg(msg_t& message)
     }
     else if(! data.compare("pbp")) {
         //print bare positions
-        const int oldaxisnum = board->getaxisnum();
+        // const int oldaxisnum = board->getaxisnum();
 
         BarePosition bp;
         board->get_cur_position(bp);
 
-        ret = board->setaxisnum(oldaxisnum);
-        if(ret < 0) {
-            prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
-            return;
-        }
-        sprintf(message.msg, " axis1: %d\n axis2: %d\n axis3: %d", bp.x_, bp.y_, bp.theta_);
+        // ret = board->setaxisnum(oldaxisnum);
+        // if(ret < 0) {
+        //     prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
+        //     return;
+        // }
+        sprintf(message.msg, " axis1: %d\n axis2: %d\n axis3: %d\n", bp.x_, bp.y_, bp.theta_);
     }
     else if(! data.compare("pp")) {
         //print positions
-        const int oldaxisnum = board->getaxisnum();
+        // const int oldaxisnum = board->getaxisnum();
 
         Position p;
         board->get_cur_position(p);
 
-        ret = board->setaxisnum(oldaxisnum);
-        if(ret < 0) {
-            prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
-            return;
-        }
-        sprintf(message.msg, " axis1: %f\n axis2: %f\n axis3: %f", p.x_, p.y_, p.theta_);
+        // ret = board->setaxisnum(oldaxisnum);
+        // if(ret < 0) {
+        //     prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
+        //     return;
+        // }
+        sprintf(message.msg, " axis1: %f\n axis2: %f\n axis3: %f\n", p.x_, p.y_, p.theta_);
     }
     else {
         /* all other commads */
+
+        //boost::regex e("^(setaxisnum )|(sa)([0-2])$");
+        boost::regex e("^(sa|set axis )([[:digit:]])$");
+        boost::smatch what;
+        if(boost::regex_match(data, what, e, boost::match_extra))
+        {
+            unsigned int axisnum;
+
+            if(what.size() < 3)
+                std::cerr << "not a valid regexp match (whole match " << what[0] <<
+                    " )" << std::endl;
+
+            axisnum = atoi(std::string(what[2]).c_str());
+
+            //std::cout << "axisnum from regex: " << axisnum << std::endl;
+            ret = board->setaxisnum(axisnum);
+            if(ret < 0)
+                prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
+            else
+                prepare_tcp_message("TODO return message");
+            return;
+        }
 
         //check set/unset commands
         if (boost::starts_with(data, "set ")) {
@@ -211,27 +233,6 @@ void session::process_msg(msg_t& message)
             return;
         }
 
-        //boost::regex e("^(setaxisnum )|(sa)([0-2])$");
-        boost::regex e("^(sa|set axis )([[:digit:]])$");
-        boost::smatch what;
-        if(boost::regex_match(data, what, e, boost::match_extra))
-        {
-            unsigned int axisnum;
-
-            if(what.size() < 3)
-                std::cerr << "not a valid regexp match (whole match " << what[0] <<
-                    " )" << std::endl;
-
-            axisnum = atoi(std::string(what[2]).c_str());
-
-            //std::cout << "axisnum from regex: " << axisnum << std::endl;
-            ret = board->setaxisnum(axisnum);
-            if(ret < 0)
-                prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
-            else
-                prepare_tcp_message("TODO return message");
-            return;
-        }
 
         boost::regex e2("^[[:digit:]][[:alpha:]]+-?[[:digit:]]*$");
 
@@ -304,7 +305,14 @@ int main(int argc, char** argv)
                         std::cerr << "ERROR: parse_triple returned " << ret << std::endl;
                     }
 
+
+                    BarePosition cbp;
+                    board->get_cur_position(cbp);
+                    std::cout << "current postion:" << std::endl;
+                    cbp.PrintPosition();
+
                     BarePosition bp(posvec);
+
                     std::cout << "bare positions from last run:"
                               << "\n\taxis 1: " << bp.x_
                               << "\n\taxis 2: " << bp.y_

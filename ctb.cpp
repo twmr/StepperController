@@ -89,5 +89,6 @@ size_t sctl_ctb::send( const char *buf, const ssize_t n)
     if( size > 0 ) {
         rslog("#> ", buf);
     }
+    std::cout << "write returned" << size << std::endl;
     return size;
 }

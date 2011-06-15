@@ -24,12 +24,11 @@
 ////@end includes
 
 
+#include <vector>
 #include "wx/tokenzr.h"
+#include "wx/socket.h"
 #include "pm301.h"
 #include "unitconversionconstants.h"
-#include <boost/asio.hpp>
-#include "../IAP_server.hpp"
-
 
 
 ////@begin XPM images
@@ -50,25 +49,27 @@ IMPLEMENT_CLASS( PM301, wxFrame )
 BEGIN_EVENT_TABLE( PM301, wxFrame )
 
 ////@begin PM301 event table entries
-EVT_MENU( ID_MENUITEM, PM301::ClickUnitConvConsts )
+    EVT_MENU( ID_MENUITEM, PM301::ClickUnitConvConsts )
 
-EVT_MENU( ID_MENUITEM1, PM301::OnMenuitem1Click )
+    EVT_MENU( ID_MENUITEM1, PM301::OnMenuitem1Click )
 
-EVT_MENU( ID_MENUITEM2, PM301::OnPositionUpdateClick )
+    EVT_MENU( ID_MENUITEM2, PM301::OnPositionUpdateClick )
 
-EVT_TEXT_ENTER( ID_TEXTCTRL, PM301::OnTextctrlEnter )
+    EVT_SPINCTRL( ID_SPINCTRL, PM301::OnSpinctrlUpdated )
 
-EVT_TEXT_ENTER( ID_TEXTCTRL1, PM301::OnTextctrl1Enter )
+    EVT_SPINCTRL( ID_SPINCTRL1, PM301::OnSpinctrl1Updated )
 
-EVT_TEXT_ENTER( ID_TEXTCTRL2, PM301::OnTextctrl2Enter )
+    EVT_SPINCTRL( ID_SPINCTRL2, PM301::OnSpinctrl2Updated )
 
-EVT_CHECKBOX( ID_CHECKBOX, PM301::OnCheckboxClick )
+    EVT_CHECKBOX( ID_CHECKBOX, PM301::OnCheckboxClick )
 
-EVT_RADIOBOX( ID_RADIOBOX, PM301::OnRadioboxSelected )
+    EVT_RADIOBOX( ID_RADIOBOX, PM301::OnRadioboxSelected )
 
-EVT_UPDATE_UI( ID_STATUSBAR, PM301::OnStatusbarUpdate )
+    EVT_UPDATE_UI( ID_STATUSBAR, PM301::OnStatusbarUpdate )
 
 ////@end PM301 event table entries
+
+EVT_SOCKET(SOCKET_ID, PM301::OnSocketEvent )
 
 END_EVENT_TABLE()
 
@@ -77,13 +78,11 @@ END_EVENT_TABLE()
  */
 
 PM301::PM301()
-: s(io_service)
 {
     Init();
 }
 
 PM301::PM301( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
-    : s(io_service)
 {
     Init();
     Create( parent, id, caption, pos, size, style );
@@ -127,9 +126,9 @@ void PM301::Init()
 ////@begin PM301 member initialisation
     mainswitcher = NULL;
     basiccontrol = NULL;
-    new_x_pos = NULL;
-    new_y_pos = NULL;
-    new_phi_pos = NULL;
+    xSpinCtrl = NULL;
+    ySpinCtrl = NULL;
+    tSpinCtrl = NULL;
     jogmodelayout = NULL;
     checkjog = NULL;
     axradiobox = NULL;
@@ -138,17 +137,48 @@ void PM301::Init()
     statusbar = NULL;
 ////@end PM301 member initialisation
 
-    // tcp::resolver resolver(io_service);
-    // tcp::resolver::query query(tcp::v4(), "localhost", "15000");
-    // tcp::resolver::iterator iterator = resolver.resolve(query);
-    // s.connect(*iterator);
+    wxIPV4address addr;
+    addr.Hostname(wxT("localhost"));
+    addr.Service(15000);
 
-    coord_limits[0][0] = -10.0;
-    coord_limits[0][1] = 10.0;
-    coord_limits[1][0] = -10.0;
-    coord_limits[1][1] = 10.0;
-    coord_limits[2][0] = -10.0;
-    coord_limits[2][1] = 10.0;
+    s = new wxSocketClient();
+
+    s->SetEventHandler(*this, SOCKET_ID);
+    s->SetNotify(wxSOCKET_INPUT_FLAG|wxSOCKET_LOST_FLAG);
+
+    s->Notify(true);
+
+    //Block the GUI
+    s->Connect(addr, true);
+
+    double max = 5000.0;
+    coord_limits[0][0] = -max;
+    coord_limits[0][1] = max;
+    coord_limits[1][0] = -max;
+    coord_limits[1][1] = max;
+    coord_limits[2][0] = -max;
+    coord_limits[2][1] = max;
+}
+
+void PM301::OnSocketEvent(wxSocketEvent& event)
+{
+    wxSocketBase* sock = event.GetSocket();
+
+    switch(event.GetSocketEvent())
+    {
+    case wxSOCKET_INPUT:
+        std::cout << "INPUT event received" << std::endl;
+        sock->Read(reinterpret_cast<char*>(&reply), msglen);
+        break;
+    case wxSOCKET_LOST:
+    default:
+        std::cerr << "lost network connection to server" << std::endl;
+        sock->Destroy();
+        break;
+
+    }
+
+
 }
 
 
@@ -190,38 +220,29 @@ void PM301::CreateControls()
     wxStaticText* itemStaticText13 = new wxStaticText( itemFrame1, wxID_STATIC, _("x:"), wxDefaultPosition, wxDefaultSize, 0 );
     itemBoxSizer12->Add(itemStaticText13, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    new_x_pos = new wxTextCtrl( itemFrame1, ID_TEXTCTRL, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-    itemBoxSizer12->Add(new_x_pos, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    xSpinCtrl = new wxSpinCtrl( itemFrame1, ID_SPINCTRL, _T("0"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 5000, 0 );
+    itemBoxSizer12->Add(xSpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxSpinCtrl* itemSpinCtrl15 = new wxSpinCtrl( itemFrame1, ID_SPINCTRL, _T("0"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0 );
-    itemBoxSizer12->Add(itemSpinCtrl15, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    wxBoxSizer* itemBoxSizer15 = new wxBoxSizer(wxHORIZONTAL);
+    itemStaticBoxSizer11->Add(itemBoxSizer15, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
 
-    wxBoxSizer* itemBoxSizer16 = new wxBoxSizer(wxHORIZONTAL);
-    itemStaticBoxSizer11->Add(itemBoxSizer16, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
+    wxStaticText* itemStaticText16 = new wxStaticText( itemFrame1, wxID_STATIC, _("y:"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemBoxSizer15->Add(itemStaticText16, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxStaticText* itemStaticText17 = new wxStaticText( itemFrame1, wxID_STATIC, _("y:"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer16->Add(itemStaticText17, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    ySpinCtrl = new wxSpinCtrl( itemFrame1, ID_SPINCTRL1, _T("0"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 5000, 0 );
+    itemBoxSizer15->Add(ySpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    new_y_pos = new wxTextCtrl( itemFrame1, ID_TEXTCTRL1, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-    itemBoxSizer16->Add(new_y_pos, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    wxBoxSizer* itemBoxSizer18 = new wxBoxSizer(wxHORIZONTAL);
+    itemStaticBoxSizer11->Add(itemBoxSizer18, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
 
-    wxSpinCtrl* itemSpinCtrl19 = new wxSpinCtrl( itemFrame1, ID_SPINCTRL1, _T("0"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0 );
-    itemBoxSizer16->Add(itemSpinCtrl19, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    wxStaticText* itemStaticText19 = new wxStaticText( itemFrame1, wxID_STATIC, _("t:"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemBoxSizer18->Add(itemStaticText19, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxBoxSizer* itemBoxSizer20 = new wxBoxSizer(wxHORIZONTAL);
-    itemStaticBoxSizer11->Add(itemBoxSizer20, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
+    tSpinCtrl = new wxSpinCtrl( itemFrame1, ID_SPINCTRL2, _T("0"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 5000, 0 );
+    itemBoxSizer18->Add(tSpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxStaticText* itemStaticText21 = new wxStaticText( itemFrame1, wxID_STATIC, _("t:"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer20->Add(itemStaticText21, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    new_phi_pos = new wxTextCtrl( itemFrame1, ID_TEXTCTRL2, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-    itemBoxSizer20->Add(new_phi_pos, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    wxSpinCtrl* itemSpinCtrl23 = new wxSpinCtrl( itemFrame1, ID_SPINCTRL2, _T("0"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0 );
-    itemBoxSizer20->Add(itemSpinCtrl23, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    wxStaticLine* itemStaticLine24 = new wxStaticLine( itemFrame1, wxID_STATIC, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL );
-    basiccontrol->Add(itemStaticLine24, 0, wxGROW, 5);
+    wxStaticLine* itemStaticLine21 = new wxStaticLine( itemFrame1, wxID_STATIC, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL );
+    basiccontrol->Add(itemStaticLine21, 0, wxGROW, 5);
 
     jogmodelayout = new wxBoxSizer(wxVERTICAL);
     basiccontrol->Add(jogmodelayout, 0, wxGROW|wxRIGHT|wxTOP|wxBOTTOM, 5);
@@ -242,16 +263,16 @@ void PM301::CreateControls()
     batchmodelog = new wxBoxSizer(wxVERTICAL);
     mainswitcher->Add(batchmodelog, 1, wxGROW|wxALL, 5);
 
-    wxBoxSizer* itemBoxSizer29 = new wxBoxSizer(wxHORIZONTAL);
-    batchmodelog->Add(itemBoxSizer29, 0, wxGROW|wxALL, 0);
+    wxBoxSizer* itemBoxSizer26 = new wxBoxSizer(wxHORIZONTAL);
+    batchmodelog->Add(itemBoxSizer26, 0, wxGROW|wxALL, 0);
 
-    itemBoxSizer29->Add(5, 5, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    itemBoxSizer26->Add(5, 5, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxButton* itemButton31 = new wxButton( itemFrame1, ID_BUTTON, _("Load Bach File"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer29->Add(itemButton31, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    wxButton* itemButton28 = new wxButton( itemFrame1, ID_BUTTON, _("Load Bach File"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemBoxSizer26->Add(itemButton28, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxButton* itemButton32 = new wxButton( itemFrame1, ID_BUTTON1, _("Quit Batch Mode"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer29->Add(itemButton32, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    wxButton* itemButton29 = new wxButton( itemFrame1, ID_BUTTON1, _("Quit Batch Mode"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemBoxSizer26->Add(itemButton29, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
     batchmodetextctl = new wxTextCtrl( itemFrame1, ID_TEXTCTRL6, _("Batch Log"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE );
     batchmodelog->Add(batchmodetextctl, 1, wxGROW|wxALL, 5);
@@ -262,15 +283,16 @@ void PM301::CreateControls()
     statusbar->SetStatusText(_("abc"), 1);
     itemFrame1->SetStatusBar(statusbar);
 
-    wxToolBar* itemToolBar35 = CreateToolBar( wxTB_FLAT|wxTB_HORIZONTAL, ID_TOOLBAR );
-    wxButton* itemButton36 = new wxButton( itemToolBar35, ID_BUTTON2, _("Button"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemToolBar35->AddControl(itemButton36);
-    itemToolBar35->Realize();
-    itemFrame1->SetToolBar(itemToolBar35);
+    wxToolBar* itemToolBar32 = CreateToolBar( wxTB_FLAT|wxTB_HORIZONTAL, ID_TOOLBAR );
+    itemToolBar32->Show(false);
+    wxButton* itemButton33 = new wxButton( itemToolBar32, ID_BUTTON2, _("Button"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemToolBar32->AddControl(itemButton33);
+    itemToolBar32->Realize();
+    itemFrame1->SetToolBar(itemToolBar32);
 
     // Connect events and objects
-    itemButton31->Connect(ID_BUTTON, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LoadBatchFileDialog), NULL, this);
-    itemButton32->Connect(ID_BUTTON1, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LeaveBatchModeButtonPressed), NULL, this);
+    itemButton28->Connect(ID_BUTTON, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LoadBatchFileDialog), NULL, this);
+    itemButton29->Connect(ID_BUTTON1, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LeaveBatchModeButtonPressed), NULL, this);
 ////@end PM301 content construction
 //std::locale::global(locale(setlocale(LC_ALL, NULL)));
 // m_locale.Init(wxLANGUAGE_DEFAULT, wxLOCALE_LOAD_DEFAULT | wxLOCALE_CONV_ENCODING);
@@ -281,6 +303,10 @@ void PM301::CreateControls()
     batchmodelog->Show(false);
     mainswitcher->Layout();
 
+    Position cp = getcurpos();
+    xSpinCtrl->SetValue((int)cp.get_x());
+    ySpinCtrl->SetValue((int)cp.get_y());
+    tSpinCtrl->SetValue((int)cp.get_theta());
 
 }
 
@@ -322,8 +348,7 @@ wxIcon PM301::GetIconResource( const wxString& name )
 
 void PM301::send(void)
 {
-    boost::asio::write(s, boost::asio::buffer(reinterpret_cast<char*>(&request), msglen));
-    boost::asio::read(s, boost::asio::buffer(reinterpret_cast<char*>(&reply), msglen));
+    s->Write(reinterpret_cast<char*>(&request), msglen);
 }
 
 
@@ -363,45 +388,45 @@ void PM301::OnRadioboxSelected( wxCommandEvent& event )
 
 
 
-int PM301::convert_to_stepper_units(const float pos, const std::string &coord) const
+int PM301::convert_to_stepper_units(const float pos, const wxString &coord) const
 {
-    if(coord == "x")
+    if(coord == wxT("x"))
         return (int)pos/x_unit_conv;
-    else if(coord == "y")
+    else if(coord == wxT("y"))
         return (int)pos/y_unit_conv;
-    else if(coord == "phi")
+    else if(coord == wxT("phi"))
         return (int)pos/phi_unit_conv;
     else
         return -1;
 }
 
-float PM301::convert_to_natural_units(const int pos, const std::string &coord) const
+float PM301::convert_to_natural_units(const int pos, const wxString &coord) const
 {
-    if(coord == "x")
+    if(coord == wxT("x"))
         return pos*x_unit_conv;
-    else if(coord == "y")
+    else if(coord == wxT("y"))
         return pos*y_unit_conv;
-    else if(coord == "phi")
+    else if(coord == wxT("phi"))
         return pos*phi_unit_conv;
     else
         return -1.0;
 }
 
 
-int PM301::getIdxFromCoord(const std::string &coord)
+int PM301::getIdxFromCoord(const wxString &coord)
 {
-    if(coord == "x")
+    if(coord == wxT("x"))
         return 0;
-    else if(coord == "y")
+    else if(coord == wxT("y"))
         return 1;
-    else if(coord == "phi")
+    else if(coord == wxT("phi"))
         return 2;
     else
         return -1;
 }
 
 
-void PM301::check_and_update_position(wxTextCtrl* ctrl, const std::string& coord, const double curval)
+void PM301::check_and_update_position(wxSpinCtrl* ctrl, const wxString& coord, const double curval)
 {
     int idx = getIdxFromCoord(coord);
     bool outofregion = false;
@@ -422,8 +447,7 @@ void PM301::check_and_update_position(wxTextCtrl* ctrl, const std::string& coord
     }
 
     if(outofregion) {
-        wxString wxcord = wxString::FromAscii(coord.c_str());
-        wxString tmp = wxT("Entered ") + wxcord + wxT(" position (%f) is out of range. Move motor to ") + wxcord + wxT("%s=%f ?");
+        wxString tmp = wxT("Entered ") + coord + wxT(" position (%f) is out of range. Move motor to ") + coord + wxT("%s=%f ?");
         wxString msg = wxString::Format(tmp, curval,
                                         greatermax ? wxT("max") : wxT("min"),
                                         greatermax ? coord_limits[idx][1] : coord_limits[idx][0]);
@@ -436,6 +460,11 @@ void PM301::check_and_update_position(wxTextCtrl* ctrl, const std::string& coord
             //FIXME sendmessage
             ctrl->SetValue(wxString::Format(wxT("%f"),
                                             greatermax ? coord_limits[idx][1] : coord_limits[idx][0]));
+            
+            tmp.Printf(wxT("sa%d"),idx);
+            SendMessage(tmp);
+            tmp.Printf(wxT("1MA%d"),  (int)(greatermax ? coord_limits[idx][1] : coord_limits[idx][0]));
+            SendMessage(tmp);
             break;
         case wxID_NO:
             //wxLogError(wxT("no"));
@@ -445,28 +474,13 @@ void PM301::check_and_update_position(wxTextCtrl* ctrl, const std::string& coord
         }
     }
     else {
-        //
+        wxString tmp;
+            tmp.Printf(wxT("sa%d"),idx);
+            SendMessage(tmp);
+            tmp.Printf(wxT("1MA%d"), (int)curval);
+            SendMessage(tmp);
     }
 
-}
-
-
-/*
- * wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL
- */
-
-void PM301::OnTextctrlEnter( wxCommandEvent& event )
-{
-    wxString entered = new_x_pos->GetValue();
-
-    double value;
-    if(!entered.ToDouble(&value)){
-        wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
-        //set default value ?!?!?
-        return;
-    }
-
-    check_and_update_position(new_x_pos, std::string("x"), value);
 }
 
 
@@ -479,6 +493,8 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
     if(checkjog->IsChecked()) {
         SendMessage("1AR");
         axradiobox->Show(true);
+        SendMessage("sa0");
+
     } else
     {
         SendMessage("1IR");
@@ -489,53 +505,17 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
 }
 
 
-/*
- * wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL1
- */
-
-void PM301::OnTextctrl1Enter( wxCommandEvent& event )
-{
-    wxString entered = new_y_pos->GetValue();
-
-    double value;
-    if(!entered.ToDouble(&value)){
-        wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
-        //set default value ?!?!?
-        return;
-    }
-
-    check_and_update_position(new_y_pos, std::string("y"), value);
-}
-
-
-/*
- * wxEVT_COMMAND_TEXT_ENTER event handler for ID_TEXTCTRL2
- */
-
-void PM301::OnTextctrl2Enter( wxCommandEvent& event )
-{
-    wxString entered = new_phi_pos->GetValue();
-
-    double value;
-    if(!entered.ToDouble(&value)){
-        wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
-        //set default value ?!?!?
-        return;
-    }
-
-    check_and_update_position(new_y_pos, std::string("phi"), value);
-}
-
 Position PM301::getcurpos()
 {
     static int a=10;
     static int b=20;
     static int c=30;
-    wxString text;
 
-    //SendMessage("pbp");
+    SendMessage("pbp");
+    s->Read(reinterpret_cast<char*>(&reply), msglen);
+    wxString text(reply.msg,wxConvUTF8);
 
-    text.Printf(_T(" axis1: %d\n axis2: %d\n axis3:\n"), a,b,c);
+    //text.Printf(_T(" axis1: %d\n axis2: %d\n axis3:\n"), a,b,c);
 
 //    wxRegEx rePos(_T("[[:digit:]]+\n"));
 //    wxString num = rePos.GetMatch(text, 1);
@@ -693,7 +673,7 @@ void* PositionUpdateThread::Entry()
         text.Printf(wxT("Position: x: %d,  y: %d,  \u0398: %d"),
                     cp.get_x(), cp.get_y(), cp.get_theta());
         WriteText(text,0);
-        wxThread::Sleep(800);
+        wxThread::Sleep(900);
     }
     return NULL;
 }
@@ -715,3 +695,73 @@ void PM301::OnPositionUpdateClick( wxCommandEvent& event )
             wxLogError(wxT("Can't run thread"));
     }
 }
+
+
+void PM301::GeneralSpinCtrlUpdate(const wxString& coord)
+{
+    wxSpinCtrl *cur = NULL;
+    //wxSpinCtrlDouble *tmp = NULL;
+    if(coord == wxT("x"))
+        cur = xSpinCtrl;
+    else if(coord == wxT("y"))
+        cur = ySpinCtrl;
+    else if(coord == wxT("phi"))
+        cur = tSpinCtrl;
+    else
+        return;
+
+    int entered = cur->GetValue();
+    double value = entered;
+    //if(!entered.ToDouble(&value)){
+    //    wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
+        //set default value ?!?!?
+    //    return;
+    //}
+
+    check_and_update_position(cur, coord, value);
+
+}
+
+
+/*
+ * wxEVT_COMMAND_TEXT_UPDATED event handler for ID_SPINCTRL
+ */
+
+//void PM301::OnxSpinCtrlTextUpdated( wxCommandEvent& event )
+//{
+//    GeneralSpinCtrlUpdate(wxT("x"));
+//}
+
+
+
+
+
+/*
+ * wxEVT_COMMAND_SPINCTRL_UPDATED event handler for ID_SPINCTRL
+ */
+
+void PM301::OnSpinctrlUpdated( wxSpinEvent& event )
+{
+    GeneralSpinCtrlUpdate(wxT("x"));
+}
+
+
+/*
+ * wxEVT_COMMAND_SPINCTRL_UPDATED event handler for ID_SPINCTRL1
+ */
+
+void PM301::OnSpinctrl1Updated( wxSpinEvent& event )
+{
+    GeneralSpinCtrlUpdate(wxT("y")); 
+}
+
+
+/*
+ * wxEVT_COMMAND_SPINCTRL_UPDATED event handler for ID_SPINCTRL2
+ */
+
+void PM301::OnSpinctrl2Updated( wxSpinEvent& event )
+{
+    GeneralSpinCtrlUpdate(wxT("phi"));
+}
+
