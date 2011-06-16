@@ -298,12 +298,22 @@ int main(int argc, char** argv)
                     }
 
 
-                    BarePosition cbp;
-                    board->get_cur_position(cbp);
-                    std::cout << "current postion:" << std::endl;
-                    cbp.PrintPosition();
+                    // BarePosition cbp;
+                    // board->get_cur_position(cbp);
+                    // std::cout << "current postion:" << std::endl;
+                    // cbp.PrintPosition();
 
+                    //FIXME move this send command stuff to the initAxes functino!
+                    // and switch to XML files / boost::propertytree!!
                     BarePosition bp(posvec);
+                    board->setaxisnum(0);
+                    board->send_command_quiet("1SP" + boost::lexical_cast<std::string>(bp.get_x()));
+                    board->setaxisnum(1);
+                    board->send_command_quiet("1SP" + boost::lexical_cast<std::string>(bp.get_y()));
+                    board->setaxisnum(2);
+                    board->send_command_quiet("1SP" + boost::lexical_cast<std::string>(bp.get_theta()));
+                    board->setaxisnum(0);
+
 
                     std::cout << "bare positions from last run:"
                               << "\n\taxis 1: " << bp.get_x()
