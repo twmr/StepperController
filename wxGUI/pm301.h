@@ -28,6 +28,8 @@
 #include "wx/thread.h"
 #include "wx/textfile.h"
 #include "../include/global.hpp"
+#include "../include/position.hpp"
+
 
 /*!
  * Forward declarations
@@ -35,10 +37,11 @@
 
 ////@begin forward declarations
 class wxBoxSizer;
-class wxSpinCtrl;
+class wxSpinCtrlDouble;
 class wxStatusBar;
 ////@end forward declarations
 class UnitConversionConstants;
+class PositionUpdateThread;
 
 /*!
  * Control identifiers
@@ -52,6 +55,7 @@ class UnitConversionConstants;
 #define ID_SPINCTRL 10003
 #define ID_SPINCTRL1 10010
 #define ID_SPINCTRL2 10009
+#define ID_BUTTON3 10006
 #define ID_CHECKBOX 10004
 #define ID_RADIOBOX 10005
 #define ID_BUTTON 10016
@@ -61,39 +65,12 @@ class UnitConversionConstants;
 #define ID_TOOLBAR 10018
 #define ID_BUTTON2 10019
 #define SYMBOL_PM301_STYLE wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxCLOSE_BOX
-#define SYMBOL_PM301_TITLE _("PM301")
+#define SYMBOL_PM301_TITLE _("MOVES - Stepper Motor Controller (PM381)")
 #define SYMBOL_PM301_IDNAME ID_PM301
-#define SYMBOL_PM301_SIZE wxSize(400, 330)
+#define SYMBOL_PM301_SIZE wxSize(400, 300)
 #define SYMBOL_PM301_POSITION wxDefaultPosition
 ////@end control identifiers
 #define SOCKET_ID 9980
-
-//FIXME mention unit of variables
-#define x_min 0.9
-#define x_max 3.4
-
-/*!
- * Position class declaration
- */
- 
-class Position
-{
-public:
-    Position(const int x, const int y, const int theta):
-        x_(x), y_(y), theta_(theta)
-        { };
-    int get_x() { return x_; }
-    int get_y() { return y_; }
-    int get_theta() { return theta_; }
-    
-private:
-    int x_;
-    int y_;
-    int theta_;
-};
-
-
-
 
 /*!
  * PM301 class declaration
@@ -140,6 +117,9 @@ public:
     /// wxEVT_COMMAND_SPINCTRL_UPDATED event handler for ID_SPINCTRL2
     void OnSpinctrl2Updated( wxSpinEvent& event );
 
+    /// wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BUTTON3
+    void OnButtonZeroPositionClick( wxCommandEvent& event );
+
     /// wxEVT_COMMAND_CHECKBOX_CLICKED event handler for ID_CHECKBOX
     void OnCheckboxClick( wxCommandEvent& event );
 
@@ -171,7 +151,7 @@ public:
     void SendMessage(const std::string&); 
     void SendMessage(const char *); 
     void send();
-    void check_and_update_position(wxSpinCtrl*, const wxString&, const double);
+    void check_and_update_position(wxSpinCtrlDouble*, const wxString&, const double);
     int getIdxFromCoord(const wxString&);
 
     /* unit conversion functions */
@@ -189,9 +169,9 @@ public:
 ////@begin PM301 member variables
     wxBoxSizer* mainswitcher;
     wxBoxSizer* basiccontrol;
-    wxSpinCtrl* xSpinCtrl;
-    wxSpinCtrl* ySpinCtrl;
-    wxSpinCtrl* tSpinCtrl;
+    wxSpinCtrlDouble* xSpinCtrl;
+    wxSpinCtrlDouble* ySpinCtrl;
+    wxSpinCtrlDouble* tSpinCtrl;
     wxBoxSizer* jogmodelayout;
     wxCheckBox* checkjog;
     wxRadioBox* axradiobox;
@@ -212,6 +192,7 @@ private:
     static const float x_unit_conv = 2.0;
     static const float y_unit_conv = 2.0;
     static const float phi_unit_conv = 2.0;
+    PositionUpdateThread *posthread;
     UnitConversionConstants *uconvframe;
 };
 
@@ -238,7 +219,7 @@ public:
         pm301(p)
         {};
     virtual void *Entry();
-    void WriteText(const wxString& text, const size_t n) const;
+    void WriteText(const wxString& text, const Position &cp, const size_t n) const;
 
 private:
     PM301 *pm301;

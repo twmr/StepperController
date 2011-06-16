@@ -54,8 +54,9 @@ const char* helpMessage =
     "set/unset jog : enable or disable jog mode\n"
     "mr a,b,c      : move relative a,b,c are real numbers\n"
     "ma a,b,c      : move absolute a,b,c are real numbers\n"
-    "printconvconsts       : print the conversion constants\n"
-    "set convconsts a,b,c  : setthe conversion constants\n"
+    //"printconvconsts       : print the conversion constants\n"
+    //"set convconsts a,b,c  : setthe conversion constants\n"
+    "set zero      : set the current position to zero\n"
     "pp            : print positions of all motors in user defined units\n"
     "pbp           : print bare positions of all motors (stepperboard units)"
 
@@ -124,31 +125,15 @@ void session::process_msg(msg_t& message)
     }
     else if(! data.compare("pbp")) {
         //print bare positions
-        // const int oldaxisnum = board->getaxisnum();
-
         BarePosition bp;
         board->get_cur_position(bp);
-
-        // ret = board->setaxisnum(oldaxisnum);
-        // if(ret < 0) {
-        //     prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
-        //     return;
-        // }
-        sprintf(message.msg, " axis1: %d\n axis2: %d\n axis3: %d\n", bp.x_, bp.y_, bp.theta_);
+        sprintf(message.msg, " axis1: %d\n axis2: %d\n axis3: %d\n", bp.get_x(), bp.get_y(), bp.get_theta());
     }
     else if(! data.compare("pp")) {
         //print positions
-        // const int oldaxisnum = board->getaxisnum();
-
         Position p;
         board->get_cur_position(p);
-
-        // ret = board->setaxisnum(oldaxisnum);
-        // if(ret < 0) {
-        //     prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
-        //     return;
-        // }
-        sprintf(message.msg, " axis1: %f\n axis2: %f\n axis3: %f\n", p.x_, p.y_, p.theta_);
+        sprintf(message.msg, " axis1: %f\n axis2: %f\n axis3: %f\n", p.get_x(), p.get_y(), p.get_theta());
     }
     else {
         /* all other commads */
@@ -185,6 +170,13 @@ void session::process_msg(msg_t& message)
                 ret = board->send_command("1AR", message.msg);
                 if(ret < 0)
                     prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
+            }
+            else if(! setvar.compare("zero")) {
+                // set current position to zero - this doesn't move
+                // the stepper, only updates position inside the
+                // Memory of the Stepper Controller Hardware
+                board->SetZero();
+                prepare_tcp_message("TODO setzero return message");
             }
             else
                 prepare_tcp_message("invalid set command (check syntax)");
@@ -256,7 +248,7 @@ void catch_int(int sig)
     board->get_cur_position(bp);
     std::cout << "writing current state to file" << lastrunfilename << std::endl;
     std::ofstream f(lastrunfilename.c_str(), ios_base::out | ios_base::trunc);
-    f << bp.x_ << ", "<<  bp.y_ << ", "<< bp.theta_ << std::endl;
+    f << bp.get_x() << ", "<<  bp.get_y() << ", "<< bp.get_theta() << std::endl;
     f.close();
     exit(1);
 }
@@ -314,9 +306,9 @@ int main(int argc, char** argv)
                     BarePosition bp(posvec);
 
                     std::cout << "bare positions from last run:"
-                              << "\n\taxis 1: " << bp.x_
-                              << "\n\taxis 2: " << bp.y_
-                              << "\n\taxis 3: " << bp.theta_ << std::endl;
+                              << "\n\taxis 1: " << bp.get_x()
+                              << "\n\taxis 2: " << bp.get_y()
+                              << "\n\taxis 3: " << bp.get_theta() << std::endl;
                     std::cout << "move to it ....";
                     board->move_to(bp);
                     std::cout << " done" << std::endl;

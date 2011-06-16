@@ -29,33 +29,6 @@
 #include "rs232.hpp"
 
 
-void  ConversionConstants::get_bare_position(BarePosition& ret, const Position &pos) const
-{
-    ret.x_ = static_cast<BarePosition::type>(pos.x_/xconv_);
-    ret.y_ = static_cast<BarePosition::type>(pos.y_/yconv_);
-    ret.theta_ = static_cast<BarePosition::type>(pos.theta_/thetaconv_);
-}
-
-void ConversionConstants::get_position(Position& ret, const BarePosition &bpos) const
-{
-    ret.x_ = bpos.x_*xconv_;
-    ret.y_ = bpos.y_*yconv_;
-    ret.theta_ = bpos.theta_*thetaconv_;
-}
-
-void ConversionConstants::set_constants(const std::vector<double>& cvec)
-{
-    if(cvec.size() < 3){
-        std::cerr << "WARNING: vector length in set_constants too small" << std::endl;
-        return;
-    }
-
-    xconv_ = cvec[0];
-    yconv_ = cvec[1];
-    thetaconv_ = cvec[2];
-}
-
-
 IAPBoard::IAPBoard(const RS232config & serialconf, const IAPconfig & axisconf) :
     connected(false),
     serial_interface(STD_TR1::shared_ptr< RS232 >(new sctl_ctb(serialconf))),
@@ -64,6 +37,7 @@ IAPBoard::IAPBoard(const RS232config & serialconf, const IAPconfig & axisconf) :
     curaxis(&axis[0])
 {
     /* opens/initializes the serial device */
+    //FIXME check return value
     serial_interface->open();
 }
 
@@ -82,8 +56,8 @@ void IAPBoard::connect()
     send_command("1ID", buf);
     std::cout << "FIRMWARE Version: " << buf << std::endl;
 
-    std::cout << "set number of channels to : " << NR_AXIS << std::endl;
-    send_command_quiet("1NC" + boost::lexical_cast<std::string>(NR_AXIS));
+    std::cout << "set number of channels to : " << GetNrOfAxes() << std::endl;
+    send_command_quiet("1NC" + boost::lexical_cast<std::string>(GetNrOfAxes()));
 
     std::cout << "initialize axes parameters" << std::endl;
     initAxes();
@@ -212,14 +186,14 @@ int IAPBoard::getaxisnum() const
 int IAPBoard::initAxes()
 {
     int error;
-    unsigned int i;
+    size_t i;
     struct mct_Axis *curaxis;
     char axstr_[4], buf[80];
     std::string axstr;;
     
     error = 0;
     
-    for(i=1; i <= NR_AXIS; ++i){
+    for(i=1; i <= GetNrOfAxes(); ++i){
         snprintf(axstr_,4, "<%d>",i);
         curaxis = &axis[i-1];
         axstr = axstr_;
@@ -297,7 +271,7 @@ int IAPBoard::setaxisnum(const unsigned int axisnum)
 
     //if (axisnum == curaxisnum) return - 1;
 
-    if(axisnum >= NR_AXIS) {
+    if(axisnum >= GetNrOfAxes()) {
         std::cout << " axnium "  << axisnum << " is not a valid axinum" << std::endl;
 
         //FIXME move this to server
@@ -327,11 +301,11 @@ void IAPBoard::move_rel(const BarePosition& rel)
 {
     const int curaxis = getaxisnum();
     setaxisnum(0);
-    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.x_));
+    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_x()));
     setaxisnum(1);
-    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.y_));
+    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_y()));
     setaxisnum(2);
-    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.theta_));
+    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_theta()));
     setaxisnum(curaxis);
 }
 
@@ -347,11 +321,11 @@ void IAPBoard::move_to(const BarePosition& abs)
 {
     const int curaxis = getaxisnum();
     setaxisnum(0);
-    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.x_));
+    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_x()));
     setaxisnum(1);
-    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.y_));
+    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_y()));
     setaxisnum(2);
-    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.theta_));
+    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_theta()));
     setaxisnum(curaxis);
 }
 
@@ -362,7 +336,7 @@ void IAPBoard::get_cur_position(BarePosition& retbarepos) const
     char buf[128];
     send_command("1QP",buf);
     const std::string line(buf);
-    std::vector<BarePosition::type> vals(get_nr_axis());
+    std::vector<BarePosition::type> vals(GetNrOfAxes());
     const boost::regex re("= [-]?\\d+");
 
     // for(size_t i=0; i < line.length(); ++i)
@@ -386,9 +360,8 @@ void IAPBoard::get_cur_position(BarePosition& retbarepos) const
         tmp >> vals[i];
         // vals[i] = boost::lexical_cast<BarePosition::type>(tokens->str().substr(1));
     }
-    retbarepos.x_ = vals[0];
-    retbarepos.y_ = vals[1];
-    retbarepos.theta_ = vals[2];
+    
+    retbarepos.SetPosition(vals[0],vals[1],vals[2]);
 }
 
 void IAPBoard::get_cur_position(Position& retpos) const
@@ -417,4 +390,15 @@ void IAPBoard::test(char *msg)
 void IAPBoard::reset()
 {
     std::cout << "board: reset" << std::endl;
+}
+
+void IAPBoard::SetZero()
+{
+    std::cout << "board: set current positon to zero" << std::endl;
+    const size_t old_axis = getaxisnum();
+    for(size_t i = 0; i < GetNrOfAxes(); i++) {
+        setaxisnum(i);
+        send_command_quiet("1SP0");
+    }
+    setaxisnum(old_axis);
 }

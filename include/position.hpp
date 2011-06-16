@@ -25,37 +25,66 @@
 //#include <boost/tuple/tuple.hpp>
 #include <iostream>
 #include <vector>
+#include <exception>
+
+class E_vector_dimension_too_small: public std::exception{
+public:
+    E_vector_dimension_too_small(){};
+    ~E_vector_dimension_too_small() throw() {};
+    char const *what() const throw() {return "The provided vector had a too small dimension."; };
+};
+
 
 template <typename T>
 class DummyPosition
 {
 public:
-    DummyPosition()
+    DummyPosition() :
+        coordinates(3)
         { };
 
     DummyPosition(T x, T y, T t) :
-        x_(x), y_(y), theta_(t)
-        { };
+        coordinates(3)
+        {
+            coordinates[0] = x;
+            coordinates[1] = y;
+            coordinates[2] = t;
+        };
 
     //DummyPosition(const boost::tuple<T,T,T>& tp) :
     //    x_(tp.get(0)), y_(tp.get(1)), theta_(tp.get(2))
     //    { };
 
     DummyPosition(const std::vector<T>& tvec) :
-        x_(tvec[0]), y_(tvec[1]), theta_(tvec[2])
-        { };
+        coordinates(tvec)
+        {
+            if (coordinates.size() < 3) {
+                throw E_vector_dimension_too_small();
+            }
+        };
 
     void PrintPosition() const
         {
-            std::cout << "Position: ( x: " << x_ << " y: " << y_ << " theta: "
-                      << theta_ << " )" << std::endl;
+            std::cout << "Position: ( x: " << get_x() << " y: " << get_y() << " theta: "
+                      << get_theta() << " )" << std::endl;
         };
 
+    void SetPosition(const T x, const T y, const T t)
+        {
+            coordinates[0] = x;
+            coordinates[1] = y;
+            coordinates[2] = t;
+        }
+
+    const T get_x() const { return coordinates[0]; };
+    const T get_y() const { return coordinates[1]; };
+    const T get_theta() const { return coordinates[2]; };
 
     typedef T type;
-    T x_;
-    T y_;
-    T theta_;
+
+private:
+    //TODO replace this with a hash_map or unordered_map!!!
+    std::vector<T> coordinates;
 };
 
 typedef DummyPosition<short> BarePosition; //units that the stepper board understands

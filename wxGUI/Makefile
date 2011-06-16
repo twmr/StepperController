@@ -10,7 +10,7 @@ CONFIG=release
 
 # release
 ifeq ($(CONFIG),release)
-WXWIN=/home/thomas/wxGTK-2.8.11
+WXWIN=/home/thomas/packages/wxWidgets-2.9.1
 TOOLCHAINNAME=gtk2u
 WXVERSION:=$(shell echo `$(WXWIN)/GCCBuildReleaseGTK2Unicode/wx-config --version`)
 CXX=g++
@@ -24,8 +24,8 @@ OUTPUTPATH=GCCRelease
 OBJECTPATH=GCCRelease
 BUILDPATHS=$(OBJECTPATH)
 PROGRAM=Project1
-LIBS=$(shell $(WXWIN)/GCCBuildReleaseGTK2Unicode/wx-config --inplace --exec-prefix="$(WXWIN)/GCCBuildReleaseGTK2Unicode" --libs std --cxxflags)
-LINKERFLAGS=-lX11
+LIBS=$(shell $(WXWIN)/GCCBuildReleaseGTK2Unicode/wx-config --inplace --exec-prefix="$(WXWIN)/GCCBuildReleaseGTK2Unicode" --libs all --cxxflags)
+LINKERFLAGS=-lpangocairo-1.0 -lcairo -lX11
 WARNINGFLAGS=-Wall -Wno-write-strings
 OPTFLAGS=-O2
 DEBUGFLAGS=
@@ -35,7 +35,7 @@ GCCFLAGS=
 LDFLAGS=$(LIBS) $(LIBPATH) $(LINKERFLAGS)
 CPPFLAGS=$(CPPINC) $(GCCFLAGS) $(DEBUGFLAGS) $(OPTFLAGS) $(WARNINGFLAGS)
 LIBDIRNAME=$(WXWIN)/GCCBuildReleaseGTK2Unicode/lib
-RESPATH=--include-dir "$(WXWIN)/include" --include-dir "$(WXWIN)/contrib/include" --include-dir "$(WXWIN)/GCCBuildReleaseGTK2Unicode/lib/wx/include/gtk2-unicode-release-static-2.8"
+RESPATH=--include-dir "$(WXWIN)/include" --include-dir "$(WXWIN)/contrib/include" --include-dir "$(WXWIN)/GCCBuildReleaseGTK2Unicode/lib/wx/include/gtk2-unicode-static-2.9"
 MACPACKAGEINFO=
 endif
 
@@ -77,13 +77,13 @@ $(OUTPUTPATH)/$(PROGRAM).app/Contents/PkgInfo: $(OUTPUTPATH)/$(PROGRAM) $(INFOPL
 	ln -f $(OUTPUTPATH)/$(PROGRAM) $(OUTPUTPATH)/$(PROGRAM).app/Contents/MacOS/$(PROGRAM)
 	cp -f $(ICNSSOURCE) $(ICNSDEST)
 
-$(OBJECTPATH)/iap_gui_app.o:	iap_gui_app.cpp iap_gui_app.hpp pm301.h ../include/global.hpp
+$(OBJECTPATH)/iap_gui_app.o:	iap_gui_app.cpp iap_gui_app.hpp pm301.h ../include/global.hpp ../include/position.hpp
 	$(CXX) -c -o $@ $(CPPFLAGS) iap_gui_app.cpp
 
-$(OBJECTPATH)/pm301.o:	pm301.cpp pm301.h ../include/global.hpp unitconversionconstants.h ../include/IAP_server.hpp
+$(OBJECTPATH)/pm301.o:	pm301.cpp pm301.h ../include/global.hpp ../include/position.hpp unitconversionconstants.h
 	$(CXX) -c -o $@ $(CPPFLAGS) pm301.cpp
 
-$(OBJECTPATH)/unitconversionconstants.o:	unitconversionconstants.cpp unitconversionconstants.h pm301.h ../include/global.hpp
+$(OBJECTPATH)/unitconversionconstants.o:	unitconversionconstants.cpp unitconversionconstants.h pm301.h ../include/global.hpp ../include/position.hpp
 	$(CXX) -c -o $@ $(CPPFLAGS) unitconversionconstants.cpp
 
 .PHONY:	all clean

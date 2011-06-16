@@ -9,6 +9,7 @@ MAINO= IAPBoard.o \
 	IAPconfig.o \
 	rs232.o \
 	helper.o \
+	position.o \
 	ctb.o
 
 IAP_server: IAP_server.o ${MAINO}

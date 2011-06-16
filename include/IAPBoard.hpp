@@ -98,12 +98,14 @@ public:
     void get_cur_position(Position& retpos) const;
 
     bool is_connected() { return connected; };
+    void SetZero();
 
-    int get_nr_axis(void) const { return NR_AXIS; };
+    size_t GetNrOfAxes(void) const { return NR_AXES; };
+
     const char *get_err_string(pm381_err_t type) { return pm381_err_string[type]; };
 private:
     void send_lowlevel(char * buffer, const size_t size) const;
-    static const unsigned int NR_AXIS = 3;  // 3 axis are currently controlled by the IAP Board
+    static const size_t NR_AXES = 3;  // 3 axis are currently controlled by the IAP Board
     bool connected;
     STD_TR1::shared_ptr< RS232 > serial_interface;
     STD_TR1::shared_ptr< std::mutex > boardmutex;
@@ -122,7 +124,7 @@ private:
         long axis_Position;
         char axis_MotorStatus;  /* currently unused */
         double axis_Multiplier;
-    } axis[NR_AXIS];
+    } axis[NR_AXES];
 
     struct mct_Axis *curaxis;
 };
