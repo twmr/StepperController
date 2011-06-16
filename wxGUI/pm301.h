@@ -53,8 +53,11 @@ class PositionUpdateThread;
 #define ID_MENUITEM1 10020
 #define ID_MENUITEM2 10021
 #define ID_SPINCTRL 10003
+#define ID_BITMAPBUTTON 10007
 #define ID_SPINCTRL1 10010
+#define ID_BITMAPBUTTON1 10008
 #define ID_SPINCTRL2 10009
+#define ID_BITMAPBUTTON2 10022
 #define ID_BUTTON3 10006
 #define ID_CHECKBOX 10004
 #define ID_RADIOBOX 10005
@@ -108,14 +111,14 @@ public:
     /// wxEVT_COMMAND_MENU_SELECTED event handler for ID_MENUITEM2
     void OnPositionUpdateClick( wxCommandEvent& event );
 
-    /// wxEVT_COMMAND_SPINCTRL_UPDATED event handler for ID_SPINCTRL
-    void OnSpinctrlUpdated( wxSpinEvent& event );
+    /// wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BITMAPBUTTON
+    void OnBitmapbuttonClick( wxCommandEvent& event );
 
-    /// wxEVT_COMMAND_SPINCTRL_UPDATED event handler for ID_SPINCTRL1
-    void OnSpinctrl1Updated( wxSpinEvent& event );
+    /// wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BITMAPBUTTON1
+    void OnBitmapbutton1Click( wxCommandEvent& event );
 
-    /// wxEVT_COMMAND_SPINCTRL_UPDATED event handler for ID_SPINCTRL2
-    void OnSpinctrl2Updated( wxSpinEvent& event );
+    /// wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BITMAPBUTTON2
+    void OnBitmapbutton2Click( wxCommandEvent& event );
 
     /// wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BUTTON3
     void OnButtonZeroPositionClick( wxCommandEvent& event );
@@ -136,6 +139,9 @@ public:
     void OnStatusbarUpdate( wxUpdateUIEvent& event );
 
 ////@end PM301 event handler declarations
+    void OnSpinctrlUpdated( wxSpinDoubleEvent& event );
+    void OnSpinctrl1Updated( wxSpinDoubleEvent& event );
+    void OnSpinctrl2Updated( wxSpinDoubleEvent& event );
     void OnSocketEvent( wxSocketEvent& event );
 
 ////@begin PM301 member function declarations
@@ -153,10 +159,6 @@ public:
     void send();
     void check_and_update_position(wxSpinCtrlDouble*, const wxString&, const double);
     int getIdxFromCoord(const wxString&);
-
-    /* unit conversion functions */
-    float convert_to_natural_units(const int pos, const wxString &coord) const;
-    int convert_to_stepper_units(const float pos, const wxString &coord) const;
     
     void GeneralSpinCtrlUpdate(const wxString& coord);
     
@@ -169,8 +171,11 @@ public:
 ////@begin PM301 member variables
     wxBoxSizer* mainswitcher;
     wxBoxSizer* basiccontrol;
+    wxStaticText* xlabel;
     wxSpinCtrlDouble* xSpinCtrl;
+    wxStaticText* ylabel;
     wxSpinCtrlDouble* ySpinCtrl;
+    wxStaticText* tlabel;
     wxSpinCtrlDouble* tSpinCtrl;
     wxBoxSizer* jogmodelayout;
     wxCheckBox* checkjog;
@@ -181,19 +186,36 @@ public:
 ////@end PM301 member variables
 
     Position getcurpos();
+    
+    //protect critical data with mutexs
+    Position get_cp() const { 
+        wxMutexLocker lock(m_mutex);
+        if(!lock.IsOk()) {
+            std::cerr << "mutex lock error" << std::endl;
+            exit(1);
+        }
+        
+        //if (posthread == NULL)
+        //    cp_ = getcurpos();
+        
+        return cp_; 
+    };
+    void set_cp(const Position &cp) {
+        wxMutexLocker lock(m_mutex);
+        if(lock.IsOk())
+            cp_ = cp; 
+        else {
+            std::cerr << "mutex lock error" << std::endl;
+        }
+    };
 
 private:
     wxSocketClient* s;
     msg_t request, reply;
-    //wxLocale m_locale;
-    double coord_limits[3][2]; //max and min values of the 3 coordinates (x,y,phi)
-
-    //FIXME insert correct values
-    static const float x_unit_conv = 2.0;
-    static const float y_unit_conv = 2.0;
-    static const float phi_unit_conv = 2.0;
     PositionUpdateThread *posthread;
     UnitConversionConstants *uconvframe;
+    Position cp_;
+    mutable wxMutex m_mutex;
 };
 
 class BatchThread : public wxThread
