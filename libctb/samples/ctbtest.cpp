@@ -30,9 +30,9 @@ int main(int argc,char* argv[])
 {
     int address = 15;
 
-    int baudrate = 19200;
+    int baudrate = 9600;
 
-    string devname = ctb::COM1;
+    string devname = "/dev/ttyUSB0";
 
     string eos = "\r\n";
 
