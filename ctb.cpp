@@ -23,31 +23,37 @@
 
 #include "rs232.hpp"
 #include "global.hpp"
+#include <boost/property_tree/ptree.hpp>
 
-sctl_ctb::sctl_ctb(const RS232config & config) :
-    RS232(config),
+
+sctl_ctb::sctl_ctb(const boost::property_tree::ptree& config) :
+    devicename(config.get<std::string>("devname")),
+    baudrate(config.get<int>("baudrate")),
+    protocol(config.get<std::string>("protocol")),
     serialPort(STD_TR1::shared_ptr< ctb::SerialPort >(new ctb::SerialPort())),
-    device(STD_TR1::shared_ptr< ctb::IOBase >(static_cast<ctb::IOBase*>(0)))
-{
-}
+    device(STD_TR1::shared_ptr< ctb::IOBase >(static_cast<ctb::IOBase*>(0))) { };
 
 
 void sctl_ctb::open()
 {
     rslog("ctb open");
 
-    if( serialPort->Open( rsconfig.get_string_param("devname").c_str(),
-        rsconfig.get_int_param("baudrate"),
-        rsconfig.get_string_param("protocol").c_str(),
-        ctb::SerialPort::NoFlowControl ) >= 0 ) {
+#ifndef SERIAL_DEBUG // if defined run without hardware
+    if( serialPort->Open(devicename.c_str(), baudrate, protocol.c_str(),
+                         ctb::SerialPort::NoFlowControl ) >= 0 ) {
         device = serialPort;
     }
 
     if( ! device ) {
-        std::cerr << "Cannot open " <<  rsconfig.get_string_param("devname")  << std::endl;
+        std::cerr << "Cannot open " <<  devicename  << std::endl;
         exit(1);
     }
-    std::cout << "opened " <<  rsconfig.get_string_param("devname")  << std::endl;
+#else
+    std::cout << "FAKE: " << devicename << " " << baudrate << " "
+              << protocol << std::endl;
+#endif // SERIAL_DEBUG
+
+    std::cout << "opened " <<  devicename << std::endl;
 }
 
 
@@ -55,8 +61,10 @@ void sctl_ctb::close()
 {
     rslog("ctb close");
 
+#ifndef SERIAL_DEBUG // if defined run without hardware
     if( device )
         device->Close();
+#endif
 }
 
 
@@ -65,7 +73,21 @@ size_t sctl_ctb::receive(char *buf, const ssize_t n)
     size_t size = 0;
     //ssize_t totalsize = 0;
 
+#ifndef SERIAL_DEBUG // if defined run without hardware
     size = device->Read( buf, n);
+#else
+    static bool rcvflag = true;
+    const char teststring[] = "01:TESTSTRING\r\n";
+
+    if(rcvflag) {
+        strncpy(buf,teststring,n);
+        size = strlen(buf);
+    }
+    else
+        size = 0;
+
+    rcvflag = !rcvflag;
+#endif
 
     // something received?
     if( size > 0 ) {
@@ -83,12 +105,15 @@ size_t sctl_ctb::send( const char *buf, const ssize_t n)
 {
     size_t size = 0;
 
+#ifndef SERIAL_DEBUG // if defined run without hardware
     size = device->Write( const_cast<char*>(buf), n);
+#else
+    size = n;
+#endif
 
     // sent string ?
     if( size > 0 ) {
         rslog("#> ", buf);
     }
-    std::cout << "write returned" << size << std::endl;
     return size;
 }

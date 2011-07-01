@@ -5,12 +5,13 @@ TARGETS= IAP_server IAP_client_cli
 default: ${TARGETS}
 
 MAINO= IAPBoard.o \
-	rs232config.o \
 	IAPconfig.o \
 	rs232.o \
 	helper.o \
 	position.o \
 	ctb.o
+
+
 
 IAP_server: IAP_server.o ${MAINO}
 	$(CC)  ${MAINO} ${CCFLAGS} -lctb-0.16 -lboost_regex -lboost_thread-mt -lboost_system $< -o $@
@@ -18,6 +19,9 @@ IAP_server: IAP_server.o ${MAINO}
 IAP_client_cli: IAP_client_cli.o
 	$(CC)  ${CCFLAGS} -lboost_system $< -o $@
 
+#EXTRAFLAGS=-DSERIAL_DEBUG
+ctb.o: ctb.cpp
+	${CC} $< ${CCFLAGS} ${EXTRAFLAGS} -Iinclude -c -o $@
 
 %.o: %.cpp %.hpp
 	${CC} $< ${CCFLAGS} -Iinclude -c -o $@

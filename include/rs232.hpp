@@ -23,40 +23,17 @@
 #define __RS232__
 
 #include <iostream>
-#include <fstream>
-#include <map>
 #include <cstdlib>
-
+#include <fstream>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include "ctb-0.15/ctb.h"
 #include "global.hpp"
 #include "exceptions.hpp"
 
-class RS232config {
-public:
-    RS232config() {};
-    RS232config(const std::string & configfile);
-    ~RS232config() {};
-
-    const char* name() const { return "rs232";};
-
-    bool get_param(const std::string& s, double& v) const;
-    bool get_param(const std::string& s, int& v) const;
-    bool get_param(const std::string& s, std::string& v) const;
-
-    double      get_double_param(const std::string& s) const throw (E_missing_parameter);
-    int         get_int_param(const std::string& s) const throw (E_missing_parameter);
-    std::string get_string_param(const std::string& s) const throw (E_missing_parameter);
-
-private:
-    //std::map<std::string, double> r_params;
-    std::map<std::string, std::string> s_params;
-    //std::map<std::string, int> i_params;
-};
-
 class RS232 {
 public:
-    RS232(const RS232config & config);
+    RS232();
     virtual ~RS232() { if(myfilestream.is_open()) myfilestream.close(); };
 
     // pure virtual functions
@@ -66,8 +43,6 @@ public:
     virtual size_t receive(char *buf, const ssize_t n) = 0;
 
     int rslog(const std::string & logstring, const std::string prefix = "");
-    const RS232config &rsconfig;
-
 private:
     std::ofstream myfilestream;
 };
@@ -75,7 +50,7 @@ private:
 //use libctb for rs232
 class sctl_ctb: public RS232 {
 public:
-    sctl_ctb(const RS232config & config);
+    sctl_ctb(const boost::property_tree::ptree& pt);
     ~sctl_ctb() {};
     void open();
     void close();
@@ -83,11 +58,14 @@ public:
     //int receive() {};
     size_t send(const char *buf, const ssize_t n);
     size_t receive(char *buf, const ssize_t n);
-    
+
 private:
+    const std::string devicename;
+    const int baudrate;
+    const std::string protocol;
+
     STD_TR1::shared_ptr< ctb::SerialPort > serialPort;
     STD_TR1::shared_ptr< ctb::IOBase > device;
-    
 };
 
-#endif 
+#endif

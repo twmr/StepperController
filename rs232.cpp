@@ -22,8 +22,7 @@
 #include "rs232.hpp"
 #include <ctime>
 
-RS232::RS232(const RS232config & config) :
-    rsconfig(config),
+RS232::RS232() :
     myfilestream("rs232.log", std::ios::out | std::ios::app)
 {
     if(myfilestream.is_open() != true) {

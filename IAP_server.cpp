@@ -21,6 +21,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <signal.h> //FIXME not available for non unix systems
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
@@ -33,7 +34,6 @@
 
 #include "IAP_server.hpp"
 #include "IAPBoard.hpp"
-#include "rs232.hpp"
 #include "helper.hpp"
 
 using namespace std;
@@ -50,7 +50,7 @@ const char* helpMessage =
     "serialtest    : test rs232 communication\n"
     "\n"
     "sleep N       : sleep N seconds\n" //implemented in the client
-    "set axis N    : setaxis where N is the axisnumber [0-2]\n"
+    "set axis N    : setaxis where N is the axisnumber [1-3]\n"
     "set/unset jog : enable or disable jog mode\n"
     "mr a,b,c      : move relative a,b,c are real numbers\n"
     "ma a,b,c      : move absolute a,b,c are real numbers\n"
@@ -153,10 +153,14 @@ void session::process_msg(msg_t& message)
 
             //std::cout << "axisnum from regex: " << axisnum << std::endl;
             ret = board->setaxisnum(axisnum);
-            if(ret < 0)
+            if(ret < 0){
+                std::cout << " dummy " << ret << std::endl;
+                std::cout << board->get_err_string(static_cast<pm381_err_t>(-ret)) << std::endl;
                 prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
+            }
+
             else
-                prepare_tcp_message("TODO return message");
+                prepare_tcp_message("Set Axis CMD Succeeded");
             return;
         }
 
@@ -245,12 +249,15 @@ void catch_int(int sig)
         exit(1);
 
     BarePosition bp;
+    //bp.SetPosition(34,69,109);
     board->get_cur_position(bp);
-    std::cout << "writing current state to file" << lastrunfilename << std::endl;
-    std::ofstream f(lastrunfilename.c_str(), ios_base::out | ios_base::trunc);
-    f << bp.get_x() << ", "<<  bp.get_y() << ", "<< bp.get_theta() << std::endl;
-    f.close();
-    exit(1);
+
+    // for(size_t i=1; i <= board->GetNrOfAxes(); i++)
+    //     board->getConfig().setAxisElement(i, "Position", bp.get_x());
+
+    // (board->getConfig()).writeconfig();
+
+    _exit(1);
 }
 
 
@@ -258,75 +265,24 @@ void catch_int(int sig)
 int main(int argc, char** argv)
 {
     int ret = 0;
-    const std::string serialconfigfilename("rsconf");
-    std::string axisconfigfilename("axis.cfg");
+    std::string configfilename("parameters.xml");
 
     signal(SIGINT, catch_int);
 
     try
     {
         if(argc > 1)
-            axisconfigfilename = argv[1];
+            configfilename = argv[1];
 
-        RS232config rsconfig(serialconfigfilename);
-        IAPconfig axisconfig(axisconfigfilename);
+        std::cout << "parsing MOVES config file: " << configfilename << std::endl;
+        static IAPconfig config(configfilename);
 
         cout << "SERVER: init IAPBoard" << endl;
-        board = STD_TR1::shared_ptr<IAPBoard>(new IAPBoard(rsconfig,axisconfig));
+        board = STD_TR1::shared_ptr<IAPBoard>(new IAPBoard(config));
+        cout << "SERVER: init IAPBoard done" << endl;
 
         //sets up axis,...
         board->connect();
-
-        std::ifstream f(lastrunfilename.c_str(), ifstream::in);
-        if (f) {
-            char cstring[256];
-            std::vector<BarePosition::type> posvec(3);
-            std::cout << "reading position from "<< lastrunfilename << " file"
-                      << std::endl;
-
-            while (!f.eof())
-            {
-                f.getline(cstring, sizeof(cstring));
-                if (cstring[0] != '#')
-                {
-                    string s(cstring);
-                    std::cout << s << endl;
-                    int ret =  helper::parse_triple(s,posvec);
-                    if(ret < 0)
-                    {
-                        std::cerr << "ERROR: parse_triple returned " << ret << std::endl;
-                    }
-
-
-                    // BarePosition cbp;
-                    // board->get_cur_position(cbp);
-                    // std::cout << "current postion:" << std::endl;
-                    // cbp.PrintPosition();
-
-                    //FIXME move this send command stuff to the initAxes functino!
-                    // and switch to XML files / boost::propertytree!!
-                    BarePosition bp(posvec);
-                    board->setaxisnum(0);
-                    board->send_command_quiet("1SP" + boost::lexical_cast<std::string>(bp.get_x()));
-                    board->setaxisnum(1);
-                    board->send_command_quiet("1SP" + boost::lexical_cast<std::string>(bp.get_y()));
-                    board->setaxisnum(2);
-                    board->send_command_quiet("1SP" + boost::lexical_cast<std::string>(bp.get_theta()));
-                    board->setaxisnum(0);
-
-
-                    std::cout << "bare positions from last run:"
-                              << "\n\taxis 1: " << bp.get_x()
-                              << "\n\taxis 2: " << bp.get_y()
-                              << "\n\taxis 3: " << bp.get_theta() << std::endl;
-                    std::cout << "move to it ....";
-                    board->move_to(bp);
-                    std::cout << " done" << std::endl;
-                    break;
-                }
-            }
-            f.close();
-        }
 
         boost::asio::io_service io_service;
 

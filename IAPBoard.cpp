@@ -24,16 +24,18 @@
 #include <limits>
 #include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
+#include <boost/foreach.hpp>
+
 
 #include "IAPBoard.hpp"
 #include "rs232.hpp"
 
 
-IAPBoard::IAPBoard(const RS232config & serialconf, const IAPconfig & axisconf) :
+IAPBoard::IAPBoard(IAPconfig& conf) :
     connected(false),
-    serial_interface(STD_TR1::shared_ptr< RS232 >(new sctl_ctb(serialconf))),
+    serial_interface(STD_TR1::shared_ptr< RS232 >(new sctl_ctb(conf.GetParameters("rs232")))),
     convconsts(STD_TR1::shared_ptr< ConversionConstants >(new ConversionConstants())),
-    axisconfig(axisconf),
+    config_(conf),
     curaxis(&axis[0])
 {
     /* opens/initializes the serial device */
@@ -82,23 +84,27 @@ void IAPBoard::disconnect()
 
 
 
-/* cmd to be sent is stored in buffer. return string is also
-   returned in buffer */
-void IAPBoard::send_lowlevel(char * buffer, const size_t size) const
+std::string IAPBoard::send_lowlevel(const std::string &cmd) const
 {
     bool readflag = false;
     int len = 0;
     unsigned int idx = 0;
+    size_t send_retval;
+    static char buffer[1024];
+
+    std::cout << "IAPBoard send cmd called " << cmd;
+    sprintf(buffer, "%s\r\n", cmd.c_str());
 
     /* write() is assumed to work in one run, as the commands sent
        to the serial port have a really small size */
-    serial_interface->send(buffer, strlen(buffer));
+    send_retval = serial_interface->send(buffer, strlen(buffer));
+    std::cout << " - send ret: " << send_retval;
 
     while(len <= 0 || readflag) {
         usleep(50000);
 
         //std::cout << "db1" << std::endl;
-        len = serial_interface->receive(&buffer[idx], size-idx);
+        len = serial_interface->receive(&buffer[idx], sizeof(buffer)-idx);
         //std::cout << "db2 len " << len << std::endl;
         if(len <= 0) {
             //std::cout << "db3" << std::endl;
@@ -111,24 +117,21 @@ void IAPBoard::send_lowlevel(char * buffer, const size_t size) const
         }
     }
 
-    std::cout <<  "len = " << strlen(buffer)
-              << " buf: " << buffer << std::endl;
+    std::cout <<  " - received: len=" << strlen(buffer)
+              << " buf: " << buffer;
 
+    return std::string(buffer);
 }
 
 // sends cmd to stepper board and return reply string if return value
 // is 0 otherwise just return error code
-int IAPBoard::send_command(const std::string & cmd, char* reply) const
+int IAPBoard::send_command(const std::string & cmd, char* replymsg) const
 {
-    static char buffer[1024];
+    std::string reply = send_lowlevel(cmd);
 
-    std::cout << "rs232 send cmd called " <<  cmd << std::endl;
-    sprintf(buffer, "%s\r\n", cmd.c_str());
-
-    send_lowlevel(buffer, sizeof(buffer));
-
-    if(buffer[2] == '!') {
-        serial_interface->rslog(buffer,"CONTROLLER ERROR ");
+    // analyze reply msg from controller
+    if(reply[2] == '!') {
+        serial_interface->rslog(reply,"CONTROLLER ERROR ");
         return -E_PM381_ERROR_MSG;
     }
 
@@ -137,9 +140,11 @@ int IAPBoard::send_command(const std::string & cmd, char* reply) const
     //     return;
     // }
 
-    if(strlen(buffer) > 2 && reply) {
-        buffer[strlen(buffer)-2] = '\0';
-        strcpy(reply,&buffer[3]);
+    if(reply.length() > 5) {
+        if(replymsg) {
+            std::string tmp = reply.substr(3,reply.length()-5);
+            strcpy(replymsg,tmp.c_str());
+        }
         return 0;
     }
     else
@@ -158,134 +163,120 @@ int IAPBoard::send_command_quiet(const std::string & cmd) const
 
 int IAPBoard::send_getint_command(const std::string & cmd) const
 {
-    static char buffer[1024];
-
     std::cout << "send getint cmd called " <<  cmd << std::endl;
-    sprintf(buffer, "%s\r\n", cmd.c_str());
 
-    send_lowlevel(buffer, sizeof(buffer));
+    std::string reply = send_lowlevel(cmd);
 
-    if(buffer[2] == '!'){
-        serial_interface->rslog(buffer,"CONTROLLER ERROR : ");
+    if(reply[2] == '!'){
+        serial_interface->rslog(reply,"CONTROLLER ERROR : ");
         return std::numeric_limits<int>::min();
     }
 
-    if(strlen(buffer) > 2) {
-        buffer[strlen(buffer)-2] = '\0';
-        return atoi(&buffer[3]);
-    }
-    else
+    if(reply.length() > 5)
+        return boost::lexical_cast<int>(reply.substr(3,reply.length()-5));
+     else
         return std::numeric_limits<int>::min();
 }
 
 int IAPBoard::getaxisnum() const
 {
-    return (curaxis-axis)/sizeof(struct mct_Axis);
+    return curaxis-axis + 1;
 }
 
 int IAPBoard::initAxes()
 {
-    int error;
-    size_t i;
-    struct mct_Axis *curaxis;
-    char axstr_[4], buf[80];
-    std::string axstr;;
-    
-    error = 0;
-    
-    for(i=1; i <= GetNrOfAxes(); ++i){
-        snprintf(axstr_,4, "<%d>",i);
-        curaxis = &axis[i-1];
-        axstr = axstr_;
+    using boost::property_tree::ptree;
+    using namespace std;
 
-        curaxis->axis_BaseSpeed = axisconfig.get_int_param("BaseSpeed"+axstr);
-        curaxis->axis_SlewSpeed = axisconfig.get_int_param("SlewSpeed"+axstr);
-        curaxis->axis_SlowJogSpeed = axisconfig.get_int_param("SlowJogSpeed"+axstr);
-        curaxis->axis_FastJogSpeed = axisconfig.get_int_param("FastJogSpeed"+axstr);
-        curaxis->axis_CreepSteps = axisconfig.get_int_param("CreepSteps"+axstr);
-        curaxis->axis_Accel = axisconfig.get_int_param("Accel"+axstr);
-        curaxis->axis_LowerLimit = axisconfig.get_int_param("LowerLimit"+axstr);
-        curaxis->axis_UpperLimit = axisconfig.get_int_param("UpperLimit"+axstr);
-        curaxis->axis_Position = axisconfig.get_int_param("Position"+axstr);
-        curaxis->axis_MotorStatus = axisconfig.get_int_param("MotorStatus"+axstr);
-        curaxis->axis_Multiplier = axisconfig.get_double_param("Multiplier"+axstr);
+    char buf[80];
 
-        printf("Axis # %d\n",i);
-        printf("BaseSpeed: %ld\n",curaxis->axis_BaseSpeed);
-        printf("SlewSpeed: %ld\n",curaxis->axis_SlewSpeed);
-        printf("SlowJogSpeed: %ld\n",curaxis->axis_SlowJogSpeed);
-        printf("FastJogSpeed: %ld\n",curaxis->axis_FastJogSpeed);
-        printf("CreepSteps: %ld\n",curaxis->axis_CreepSteps);
-        printf("Accel: %ld\n",curaxis->axis_Accel);
-        printf("LowerLimit: %ld\n",curaxis->axis_LowerLimit);
-        printf("UpperLimit: %ld\n",curaxis->axis_UpperLimit);
-        printf("Position: %ld\n",curaxis->axis_Position);
-        printf("MotorStatus: %ld\n",(long int)curaxis->axis_MotorStatus);
-        printf("Multiplier: %3.2f\n",curaxis->axis_Multiplier);
-        printf("\n");
+    try {
+        BOOST_FOREACH(const ptree::value_type & v, config_.GetParameters()) {
+            if(v.first.data() != string("axis")) continue;
 
-        setaxisnum(i-1);
+            size_t id = v.second.get<size_t>("<xmlattr>.id");
+            string desc = v.second.get<string>("<xmlattr>.descriptor");
 
-        sprintf(buf,"1SB%ld",curaxis->axis_BaseSpeed);
-        send_command_quiet(buf);
+            if( setaxisnum(id) < 0 )
+                return -1;
 
-        sprintf(buf,"1SV%ld",curaxis->axis_SlewSpeed);
-        send_command_quiet(buf);
+            curaxis->axis_BaseSpeed = v.second.get<int>("BaseSpeed");
+            curaxis->axis_SlewSpeed = v.second.get<int>("SlewSpeed");
+            curaxis->axis_SlowJogSpeed = v.second.get<int>("SlowJogSpeed");
+            curaxis->axis_FastJogSpeed = v.second.get<int>("FastJogSpeed");
+            curaxis->axis_CreepSteps = v.second.get<int>("CreepSteps");
+            curaxis->axis_Accel = v.second.get<int>("Accel");
+            curaxis->axis_LowerLimit = v.second.get<int>("LowerLimit");
+            curaxis->axis_UpperLimit = v.second.get<int>("UpperLimit");
+            curaxis->axis_Position = v.second.get<int>("Position");
+            curaxis->axis_MotorStatus = v.second.get<int>("MotorStatus");
+            curaxis->axis_Multiplier = v.second.get<double>("Multiplier");
 
-        sprintf(buf,"1SJ%ld",curaxis->axis_SlowJogSpeed);
-        send_command_quiet(buf);
+            cout << "Axis # " << id << " " << desc << endl;
+            cout << "\tBaseSpeed: " << curaxis->axis_BaseSpeed << endl;
+            cout << "\tSlewSpeed: " << curaxis->axis_SlewSpeed << endl;
+            cout << "\tSlowJogSpeed: " << curaxis->axis_SlowJogSpeed << endl;
+            cout << "\tFastJogSpeed: "<<curaxis->axis_FastJogSpeed << endl;
+            cout << "\tCreepSteps: " << curaxis->axis_CreepSteps << endl;
+            cout << "\tAccel: " << curaxis->axis_Accel << endl;
+            cout << "\tLowerLimit: " << curaxis->axis_LowerLimit << endl;
+            cout << "\tUpperLimit: " << curaxis->axis_UpperLimit << endl;
+            cout << "\tPosition: " << curaxis->axis_Position << endl;
+            cout << "\tMotorStatus: " << (long int)curaxis->axis_MotorStatus << endl;
+            cout << "\tMultiplier: " << curaxis->axis_Multiplier << endl;
 
-        sprintf(buf,"1SF%ld",curaxis->axis_FastJogSpeed);
-        send_command_quiet(buf);
+            sprintf(buf,"1SB%ld",curaxis->axis_BaseSpeed);
+            send_command_quiet(buf);
 
-        sprintf(buf,"1CR%ld",curaxis->axis_CreepSteps);
-        send_command_quiet(buf);
+            sprintf(buf,"1SV%ld",curaxis->axis_SlewSpeed);
+            send_command_quiet(buf);
 
-        sprintf(buf,"1SA%ld",curaxis->axis_Accel);
-        send_command_quiet(buf);
+            sprintf(buf,"1SJ%ld",curaxis->axis_SlowJogSpeed);
+            send_command_quiet(buf);
 
-        sprintf(buf,"1LL%ld",curaxis->axis_LowerLimit);
-        send_command_quiet(buf);
+            sprintf(buf,"1SF%ld",curaxis->axis_FastJogSpeed);
+            send_command_quiet(buf);
 
-        sprintf(buf,"1UL%ld",curaxis->axis_UpperLimit);
-        send_command_quiet(buf);
+            sprintf(buf,"1CR%ld",curaxis->axis_CreepSteps);
+            send_command_quiet(buf);
 
-        //Disable this atm
-        //TODO create write cfg file function which writes the current axis setup to a file!
-        //call this function when the server is killed, shutdown, ...
-        //store the conversion constants also in this file
-        //sprintf(buf,"1SP%ld",curaxis->axis_Position);
-        //send_command_quiet(buf);
+            sprintf(buf,"1SA%ld",curaxis->axis_Accel);
+            send_command_quiet(buf);
+
+            sprintf(buf,"1LL%ld",curaxis->axis_LowerLimit);
+            send_command_quiet(buf);
+
+            sprintf(buf,"1UL%ld",curaxis->axis_UpperLimit);
+            send_command_quiet(buf);
+
+            sprintf(buf,"1SP%ld",curaxis->axis_Position);
+            send_command_quiet(buf);
+
+            //FIXME check every output of the previous send_commands
+        }
+    } catch (...)
+    {
+        std::cerr << "Exception thrown" << std::endl;
     }
-
-    //FIXME check every output of the previous send_commands
 
     return 0;
 }
 
 int IAPBoard::setaxisnum(const unsigned int axisnum)
 {
-    unsigned int curaxisnum  = (curaxis-axis)/sizeof(struct mct_Axis);
+    int ret = 0;
 
-    std::cout << "curaxis " << curaxisnum << " axisnum " << axisnum << std::endl;
+    std::cout << "old axis " << getaxisnum() << " axisnum " << axisnum << std::endl;
 
-    //if (axisnum == curaxisnum) return - 1;
-
-    if(axisnum >= GetNrOfAxes()) {
-        std::cout << " axnium "  << axisnum << " is not a valid axinum" << std::endl;
-
-        //FIXME move this to server
-        //if(!quiet)
-        //    sock.async_send("INVALID AXIS NUMBER");
-
-        return -EINVAL;
+    if(axisnum == 0 || axisnum > GetNrOfAxes()) {
+        std::cout << axisnum << " is not a valid axis number" << std::endl;
+        return -E_AXIS_NUM_INVALID;
     }
 
-    //FIXME move verbose send to server
-    send_command_quiet("1CH" + boost::lexical_cast<std::string>(axisnum+1));
-
-    curaxis = &axis[axisnum];
-    return curaxisnum;
+    ret = send_command_quiet("1CH" + boost::lexical_cast<std::string>(axisnum));
+    if(ret >= 0)
+        curaxis = &axis[axisnum-1];
+    return ret;
 }
 
 
@@ -299,14 +290,14 @@ void IAPBoard::move_rel(const Position& rel)
 //TODO implement/check SOFT_LIMITS
 void IAPBoard::move_rel(const BarePosition& rel)
 {
-    const int curaxis = getaxisnum();
-    setaxisnum(0);
-    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_x()));
+    const int prevaxis = getaxisnum();
     setaxisnum(1);
-    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_y()));
+    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_x()));
     setaxisnum(2);
+    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_y()));
+    setaxisnum(3);
     send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_theta()));
-    setaxisnum(curaxis);
+    setaxisnum(prevaxis);
 }
 
 void IAPBoard::move_to(const Position& abs)
@@ -319,14 +310,14 @@ void IAPBoard::move_to(const Position& abs)
 //TODO implement/check SOFT_LIMITS
 void IAPBoard::move_to(const BarePosition& abs)
 {
-    const int curaxis = getaxisnum();
-    setaxisnum(0);
-    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_x()));
+    const int prevaxis = getaxisnum();
     setaxisnum(1);
-    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_y()));
+    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_x()));
     setaxisnum(2);
+    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_y()));
+    setaxisnum(3);
     send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_theta()));
-    setaxisnum(curaxis);
+    setaxisnum(prevaxis);
 }
 
 
@@ -360,7 +351,7 @@ void IAPBoard::get_cur_position(BarePosition& retbarepos) const
         tmp >> vals[i];
         // vals[i] = boost::lexical_cast<BarePosition::type>(tokens->str().substr(1));
     }
-    
+
     retbarepos.SetPosition(vals[0],vals[1],vals[2]);
 }
 
@@ -375,7 +366,7 @@ void IAPBoard::get_cur_position(Position& retpos) const
 void IAPBoard::test(char *msg)
 {
     //FIXME reimplement test function
-    
+
     //char buffer[1024];
 
     // //waits for incoming dota, if no data arrives blocks forever
@@ -392,13 +383,20 @@ void IAPBoard::reset()
     std::cout << "board: reset" << std::endl;
 }
 
-void IAPBoard::SetZero()
+int IAPBoard::SetZero()
 {
     std::cout << "board: set current positon to zero" << std::endl;
     const size_t old_axis = getaxisnum();
-    for(size_t i = 0; i < GetNrOfAxes(); i++) {
-        setaxisnum(i);
+
+    for(size_t i = 1; i <= GetNrOfAxes(); i++) {
+        int ret = setaxisnum(i);
+        if (ret < 0)
+            return ret;
         send_command_quiet("1SP0");
     }
-    setaxisnum(old_axis);
+    int ret = setaxisnum(old_axis);
+    if (ret < 0)
+        return ret;
+    else
+        return 0;
 }
