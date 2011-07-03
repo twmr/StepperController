@@ -89,7 +89,6 @@ y:
 
 TODO:
 -----
-* switch to xml config files  and you boost::property_tree for parsing
 * Windows build support
 * generalize the client and server programs
 * Documentation

@@ -8,7 +8,6 @@ MAINO= IAPBoard.o \
 	IAPconfig.o \
 	rs232.o \
 	helper.o \
-	position.o \
 	ctb.o
 
 
@@ -19,7 +18,7 @@ IAP_server: IAP_server.o ${MAINO}
 IAP_client_cli: IAP_client_cli.o
 	$(CC)  ${CCFLAGS} -lboost_system $< -o $@
 
-#EXTRAFLAGS=-DSERIAL_DEBUG
+EXTRAFLAGS=-DSERIAL_DEBUG
 ctb.o: ctb.cpp
 	${CC} $< ${CCFLAGS} ${EXTRAFLAGS} -Iinclude -c -o $@
 

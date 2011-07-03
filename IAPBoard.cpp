@@ -31,13 +31,105 @@
 #include "rs232.hpp"
 
 
+Axis::Axis(const boost::property_tree::ptree &pt, IAPBoard* brd) :
+    axispt_(pt),
+    ID_(pt.get<size_t>("<xmlattr>.id")),
+    Desc_(pt.get<std::string>("<xmlattr>.descriptor")),
+    UnitName_(pt.get<std::string>("UnitConversion.unitname")),
+    UnitFactor_(pt.get<double>("UnitConversion.factor")),
+    BaseSpeed_(pt.get<int>("BaseSpeed")),
+    SlewSpeed_(pt.get<int>("SlewSpeed")),
+    SlowJogSpeed_(pt.get<int>("SlowJogSpeed")),
+    FastJogSpeed_(pt.get<int>("FastJogSpeed")),
+    CreepSteps_(pt.get<int>("CreepSteps")),
+    Accel_(pt.get<int>("Accel")),
+    LowerLimit_(pt.get<int>("LowerLimit")),
+    UpperLimit_(pt.get<int>("UpperLimit")),
+    Position_(pt.get<int>("Position")),
+    Board_(brd)
+{
+}
+
+void Axis::printAxis() const
+{
+    using namespace std;
+
+    cout << "Axis # " << ID_ << " " << Desc_ << endl;
+    cout << "\tBaseSpeed: " << BaseSpeed_ << endl;
+    cout << "\tSlewSpeed: " << SlewSpeed_ << endl;
+    cout << "\tSlowJogSpeed: " << SlowJogSpeed_ << endl;
+    cout << "\tFastJogSpeed: "<<FastJogSpeed_ << endl;
+    cout << "\tCreepSteps: " << CreepSteps_ << endl;
+    cout << "\tAccel: " << Accel_ << endl;
+    cout << "\tLowerLimit: " << LowerLimit_ << endl;
+    cout << "\tUpperLimit: " << UpperLimit_ << endl;
+    cout << "\tPosition: " << Position_ << endl;
+    cout << "\tConversion to " << UnitName_ << " Factor: " << UnitFactor_
+         << endl;
+}
+
+// update the onchip axis configuration with the value stored in this
+// axis object
+int Axis::UpdateConfiguration() const
+{
+    char buf[32];
+
+    if( Board_->setaxisnum(ID_) < 0 )
+        return -1;
+
+    sprintf(buf,"1sb%ld",BaseSpeed_); Board_->send_command_quiet(buf);
+    sprintf(buf,"1sv%ld",SlewSpeed_); Board_->send_command_quiet(buf);
+    sprintf(buf,"1sj%ld",SlowJogSpeed_); Board_->send_command_quiet(buf);
+    sprintf(buf,"1sf%ld",FastJogSpeed_); Board_->send_command_quiet(buf);
+    sprintf(buf,"1cr%ld",CreepSteps_); Board_->send_command_quiet(buf);
+    sprintf(buf,"1sa%ld",Accel_); Board_->send_command_quiet(buf);
+    sprintf(buf,"1ll%ld",LowerLimit_); Board_->send_command_quiet(buf);
+    sprintf(buf,"1ul%ld",UpperLimit_); Board_->send_command_quiet(buf);
+    sprintf(buf,"1sp%ld",Position_); Board_->send_command_quiet(buf);
+    return 0;
+}
+
+
+void Axis::move_rel(const BarePosition::type delta) const
+{
+    Board_->send_command_quiet("1MR" + boost::lexical_cast<std::string>(delta));
+}
+
+void Axis::move_abs(const BarePosition::type abs) const
+{
+    Board_->send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs));
+}
+
+
+
 IAPBoard::IAPBoard(IAPconfig& conf) :
     connected(false),
     serial_interface(STD_TR1::shared_ptr< RS232 >(new sctl_ctb(conf.GetParameters("rs232")))),
-    convconsts(STD_TR1::shared_ptr< ConversionConstants >(new ConversionConstants())),
     config_(conf),
-    curaxis(&axis[0])
+    coordinate_map(),
+    axes(),
+    curaxis(NULL)
 {
+
+    using boost::property_tree::ptree;
+    using namespace std;
+
+    // init default environment
+    envion.axis_id = 0;
+
+    try {
+        BOOST_FOREACH(const ptree::value_type & v, config_.GetParameters()) {
+            if(v.first.data() != string("axis")) continue;
+
+            axes.push_back(Axis(v.second, this));
+            //std::cout << "parsing axis "<< v.second.get_id() << "  : " << v.second.get_desc() << endl;
+            std::cout << "parsing axis "<< axes.back().get_id() << "  : " << axes.back().get_desc() << endl;
+            coordinate_map.insert(pair<size_t,string>(axes.back().get_id(), axes.back().get_desc()));
+        }
+    } catch (std::exception &e) {
+        cerr << "Exception string: " << e.what() << endl;
+    }
+
     /* opens/initializes the serial device */
     //FIXME check return value
     serial_interface->open();
@@ -59,6 +151,8 @@ void IAPBoard::connect()
     std::cout << "FIRMWARE Version: " << buf << std::endl;
 
     std::cout << "set number of channels to : " << GetNrOfAxes() << std::endl;
+
+    //TODO write GetMaxID function
     send_command_quiet("1NC" + boost::lexical_cast<std::string>(GetNrOfAxes()));
 
     std::cout << "initialize axes parameters" << std::endl;
@@ -174,150 +268,139 @@ int IAPBoard::send_getint_command(const std::string & cmd) const
 
     if(reply.length() > 5)
         return boost::lexical_cast<int>(reply.substr(3,reply.length()-5));
-     else
+    else
         return std::numeric_limits<int>::min();
 }
 
-int IAPBoard::getaxisnum() const
+
+BarePosition IAPBoard::createBarePosition(void) const
 {
-    return curaxis-axis + 1;
+    static BarePosition iap_default_bareposition(coordinate_map);
+    return iap_default_bareposition;
+}
+
+Position IAPBoard::createPosition(void) const
+{
+    static Position iap_default_position(coordinate_map);
+    return iap_default_position;
+}
+
+
+void IAPBoard::conv2bareposition(BarePosition& ret, const Position &pos) const
+{
+    for(const_axesiter it = axes.begin(); it != axes.end(); ++it)
+        ret.SetCoordinate(it->get_id(),
+                          static_cast<BarePosition::type>(
+                              pos.GetCoordinate(it->get_id())/
+                              it->get_factor()));
+}
+
+void IAPBoard::conv2postion(Position& ret, const BarePosition &bpos) const
+{
+    for(const_axesiter it = axes.begin(); it != axes.end(); ++it)
+        ret.SetCoordinate(it->get_id(),
+                          static_cast<Position::type>(
+                              bpos.GetCoordinate(it->get_id())*
+                              it->get_factor()));
+}
+
+
+void IAPBoard::SaveEnvironment()
+{
+    if(!curaxis) return;
+
+    // store current axis
+    envion.axis_id = curaxis->get_id();
+}
+
+void IAPBoard::RestoreEnvironment()
+{
+    //restore saved axis
+    setaxisnum(envion.axis_id);
 }
 
 int IAPBoard::initAxes()
 {
-    using boost::property_tree::ptree;
-    using namespace std;
-
-    char buf[80];
-
-    try {
-        BOOST_FOREACH(const ptree::value_type & v, config_.GetParameters()) {
-            if(v.first.data() != string("axis")) continue;
-
-            size_t id = v.second.get<size_t>("<xmlattr>.id");
-            string desc = v.second.get<string>("<xmlattr>.descriptor");
-
-            if( setaxisnum(id) < 0 )
-                return -1;
-
-            curaxis->axis_BaseSpeed = v.second.get<int>("BaseSpeed");
-            curaxis->axis_SlewSpeed = v.second.get<int>("SlewSpeed");
-            curaxis->axis_SlowJogSpeed = v.second.get<int>("SlowJogSpeed");
-            curaxis->axis_FastJogSpeed = v.second.get<int>("FastJogSpeed");
-            curaxis->axis_CreepSteps = v.second.get<int>("CreepSteps");
-            curaxis->axis_Accel = v.second.get<int>("Accel");
-            curaxis->axis_LowerLimit = v.second.get<int>("LowerLimit");
-            curaxis->axis_UpperLimit = v.second.get<int>("UpperLimit");
-            curaxis->axis_Position = v.second.get<int>("Position");
-            curaxis->axis_MotorStatus = v.second.get<int>("MotorStatus");
-            curaxis->axis_Multiplier = v.second.get<double>("Multiplier");
-
-            cout << "Axis # " << id << " " << desc << endl;
-            cout << "\tBaseSpeed: " << curaxis->axis_BaseSpeed << endl;
-            cout << "\tSlewSpeed: " << curaxis->axis_SlewSpeed << endl;
-            cout << "\tSlowJogSpeed: " << curaxis->axis_SlowJogSpeed << endl;
-            cout << "\tFastJogSpeed: "<<curaxis->axis_FastJogSpeed << endl;
-            cout << "\tCreepSteps: " << curaxis->axis_CreepSteps << endl;
-            cout << "\tAccel: " << curaxis->axis_Accel << endl;
-            cout << "\tLowerLimit: " << curaxis->axis_LowerLimit << endl;
-            cout << "\tUpperLimit: " << curaxis->axis_UpperLimit << endl;
-            cout << "\tPosition: " << curaxis->axis_Position << endl;
-            cout << "\tMotorStatus: " << (long int)curaxis->axis_MotorStatus << endl;
-            cout << "\tMultiplier: " << curaxis->axis_Multiplier << endl;
-
-            sprintf(buf,"1SB%ld",curaxis->axis_BaseSpeed);
-            send_command_quiet(buf);
-
-            sprintf(buf,"1SV%ld",curaxis->axis_SlewSpeed);
-            send_command_quiet(buf);
-
-            sprintf(buf,"1SJ%ld",curaxis->axis_SlowJogSpeed);
-            send_command_quiet(buf);
-
-            sprintf(buf,"1SF%ld",curaxis->axis_FastJogSpeed);
-            send_command_quiet(buf);
-
-            sprintf(buf,"1CR%ld",curaxis->axis_CreepSteps);
-            send_command_quiet(buf);
-
-            sprintf(buf,"1SA%ld",curaxis->axis_Accel);
-            send_command_quiet(buf);
-
-            sprintf(buf,"1LL%ld",curaxis->axis_LowerLimit);
-            send_command_quiet(buf);
-
-            sprintf(buf,"1UL%ld",curaxis->axis_UpperLimit);
-            send_command_quiet(buf);
-
-            sprintf(buf,"1SP%ld",curaxis->axis_Position);
-            send_command_quiet(buf);
-
-            //FIXME check every output of the previous send_commands
-        }
-    } catch (...)
+    for(const_axesiter it = axes.begin(); it != axes.end(); ++it)
     {
-        std::cerr << "Exception thrown" << std::endl;
+        it->UpdateConfiguration();
+        it->printAxis();
     }
-
     return 0;
 }
 
-int IAPBoard::setaxisnum(const unsigned int axisnum)
+Axis* IAPBoard::getAxis(const size_t id)
+{
+    axesiter it = find_if(axes.begin(),axes.end(),
+                          [=](Axis& ax) { return( ax.get_id() == id); });
+    return (it == axes.end()) ? NULL : &(*it);
+}
+
+Axis* IAPBoard::getAxis(const std::string desc)
+{
+    axesiter it = find_if(axes.begin(),axes.end(),
+                          [=](Axis& ax) { return( ax.get_desc() == desc); });
+    return (it == axes.end()) ? NULL : &(*it);
+}
+
+int IAPBoard::setaxisnum(const size_t id)
 {
     int ret = 0;
 
-    std::cout << "old axis " << getaxisnum() << " axisnum " << axisnum << std::endl;
-
-    if(axisnum == 0 || axisnum > GetNrOfAxes()) {
-        std::cout << axisnum << " is not a valid axis number" << std::endl;
-        return -E_AXIS_NUM_INVALID;
+    Axis* aptr = getAxis(id);
+    if(!aptr) {
+        std::cout << id << " is not a valid axis id" << std::endl;
+        ret = -E_AXIS_NUM_INVALID;
     }
 
-    ret = send_command_quiet("1CH" + boost::lexical_cast<std::string>(axisnum));
+    ret = send_command_quiet("1CH" + boost::lexical_cast<std::string>(id));
     if(ret >= 0)
-        curaxis = &axis[axisnum-1];
+        curaxis = aptr;
+
     return ret;
 }
 
 
 void IAPBoard::move_rel(const Position& rel)
 {
-    BarePosition bp;
-    convconsts.get()->get_bare_position(bp, rel);
+    BarePosition bp = createBarePosition();
+    conv2bareposition(bp, rel);
     move_rel(bp);
 }
 
 //TODO implement/check SOFT_LIMITS
 void IAPBoard::move_rel(const BarePosition& rel)
 {
-    const int prevaxis = getaxisnum();
-    setaxisnum(1);
-    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_x()));
-    setaxisnum(2);
-    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_y()));
-    setaxisnum(3);
-    send_command_quiet("1MR" + boost::lexical_cast<std::string>(rel.get_theta()));
-    setaxisnum(prevaxis);
+    SaveEnvironment();
+
+    for(axesiter it = axes.begin(); it != axes.end(); ++it)
+    {
+        setaxisnum(it->get_id());
+        it->move_rel(rel.GetCoordinate(it->get_id()));
+    }
+
+    RestoreEnvironment();
 }
 
 void IAPBoard::move_to(const Position& abs)
 {
-    BarePosition bp;
-    convconsts.get()->get_bare_position(bp, abs);
+    BarePosition bp = createBarePosition();
+    conv2bareposition(bp, abs);
     move_to(bp);
 }
 
 //TODO implement/check SOFT_LIMITS
 void IAPBoard::move_to(const BarePosition& abs)
 {
-    const int prevaxis = getaxisnum();
-    setaxisnum(1);
-    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_x()));
-    setaxisnum(2);
-    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_y()));
-    setaxisnum(3);
-    send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs.get_theta()));
-    setaxisnum(prevaxis);
+    SaveEnvironment();
+
+    for(axesiter it = axes.begin(); it != axes.end(); ++it)
+    {
+        setaxisnum(it->get_id());
+        it->move_abs(abs.GetCoordinate(it->get_id()));
+    }
+
+    RestoreEnvironment();
 }
 
 
@@ -327,7 +410,8 @@ void IAPBoard::get_cur_position(BarePosition& retbarepos) const
     char buf[128];
     send_command("1QP",buf);
     const std::string line(buf);
-    std::vector<BarePosition::type> vals(GetNrOfAxes());
+
+    //FIXME parse id!
     const boost::regex re("= [-]?\\d+");
 
     // for(size_t i=0; i < line.length(); ++i)
@@ -340,7 +424,7 @@ void IAPBoard::get_cur_position(BarePosition& retbarepos) const
     boost::sregex_token_iterator tokens(line.begin(),line.end(),re);
     boost::sregex_token_iterator end;
 
-    for (size_t i=0; i < 3; i++, ++tokens){
+    for (size_t id=1; id <= GetNrOfAxes(); id++, ++tokens){
         if(tokens == end) {
             std::cerr << "WARNING: parsing in get_cur_position failed" << std::endl;
             return;
@@ -348,18 +432,17 @@ void IAPBoard::get_cur_position(BarePosition& retbarepos) const
 
         std::cout << "gcp tokens: " << *tokens << std::endl;
         std::stringstream tmp(tokens->str().substr(1));
-        tmp >> vals[i];
-        // vals[i] = boost::lexical_cast<BarePosition::type>(tokens->str().substr(1));
+        BarePosition::type val;
+        tmp >> val;
+        retbarepos.SetCoordinate(id,val);
     }
-
-    retbarepos.SetPosition(vals[0],vals[1],vals[2]);
 }
 
 void IAPBoard::get_cur_position(Position& retpos) const
 {
-    BarePosition bp;
+    BarePosition bp = createBarePosition();
     get_cur_position(bp);
-    convconsts.get()->get_position(retpos, bp);
+    conv2postion(retpos, bp);
 }
 
 
@@ -383,20 +466,24 @@ void IAPBoard::reset()
     std::cout << "board: reset" << std::endl;
 }
 
+
+//Send Command 1SP0 to each axis
 int IAPBoard::SetZero()
 {
     std::cout << "board: set current positon to zero" << std::endl;
-    const size_t old_axis = getaxisnum();
+    SaveEnvironment();
 
-    for(size_t i = 1; i <= GetNrOfAxes(); i++) {
-        int ret = setaxisnum(i);
-        if (ret < 0)
+    for(axesiter it = axes.begin(); it != axes.end(); ++it)
+    {
+        int ret = setaxisnum(it->get_id());
+        if (ret < 0){
+            RestoreEnvironment();
             return ret;
+        }
+
         send_command_quiet("1SP0");
     }
-    int ret = setaxisnum(old_axis);
-    if (ret < 0)
-        return ret;
-    else
-        return 0;
+
+    RestoreEnvironment();
+    return 0;
 }

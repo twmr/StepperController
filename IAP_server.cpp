@@ -125,15 +125,15 @@ void session::process_msg(msg_t& message)
     }
     else if(! data.compare("pbp")) {
         //print bare positions
-        BarePosition bp;
+        BarePosition bp = board->createBarePosition();
         board->get_cur_position(bp);
-        sprintf(message.msg, " axis1: %d\n axis2: %d\n axis3: %d\n", bp.get_x(), bp.get_y(), bp.get_theta());
+        bp.GetPositionString(message.msg);
     }
     else if(! data.compare("pp")) {
         //print positions
-        Position p;
+        Position p = board->createPosition();
         board->get_cur_position(p);
-        sprintf(message.msg, " axis1: %f\n axis2: %f\n axis3: %f\n", p.get_x(), p.get_y(), p.get_theta());
+        p.GetPositionString(message.msg);
     }
     else {
         /* all other commads */
@@ -202,16 +202,29 @@ void session::process_msg(msg_t& message)
         }
 
         // movement commands
-        if (boost::starts_with(data, "ma ")) { // move absolute
+        if (boost::starts_with(data, "ma ")) { // move abs
             std::string tmp = data.substr(3);
-            std::vector<Position::type> posvec(3);
+            std::map<std::string, Position::type> posmap;
 
-            if(!helper::parse_triple<Position::type>(tmp, posvec)) {
-                board->move_to(Position(Position(posvec)));
+            if(!helper::parse_multiplett<Position::type>(tmp, posmap)) {
+                Position mypos();
+                std::map<std::string,size_t> string_id_map = board->get_inv_coord_map();
+
+                for(std::map<std::string, Position::type>::const_iterator it = posmap.begin();
+                    it != posmap.end(); ++it){
+                    mypos.SetCoordinate(string_id_map[(*it).first], (*it).second);
+                }
+
+                std::cout << "MYPOS: ";
+                for(Position::coord_type::const_iterator it = mypos.begin(); it != mypos.end(); ++it)
+                    std::cout << it->first << ": " << it->second;
+                std::cout << std::endl;
+
+                board->move_to(Position(abspos));
                 prepare_tcp_message("Success");
             }
             else
-                prepare_tcp_message("parse_triple_failure");
+                prepare_tcp_message("parse_multiplett_failure");
 
             return;
         }
@@ -220,7 +233,7 @@ void session::process_msg(msg_t& message)
             std::vector<Position::type> posvec(3);
 
             if(!helper::parse_triple<Position::type>(tmp, posvec)) {
-                board->move_rel(Position(Position(posvec)));
+                board->move_rel(Position(3));
                 prepare_tcp_message("Success");
             }
             else
@@ -248,7 +261,7 @@ void catch_int(int sig)
     if(!board->is_connected())
         exit(1);
 
-    BarePosition bp;
+    BarePosition bp = board->createBarePosition();;
     //bp.SetPosition(34,69,109);
     board->get_cur_position(bp);
 
@@ -264,24 +277,22 @@ void catch_int(int sig)
 
 int main(int argc, char** argv)
 {
-    int ret = 0;
     std::string configfilename("parameters.xml");
 
     signal(SIGINT, catch_int);
 
+    if(argc > 1)
+        configfilename = argv[1];
+
+    std::cout << "parsing MOVES xml config file: " << configfilename << std::endl;
+    static IAPconfig config(configfilename);
+
     try
     {
-        if(argc > 1)
-            configfilename = argv[1];
-
-        std::cout << "parsing MOVES config file: " << configfilename << std::endl;
-        static IAPconfig config(configfilename);
-
         cout << "SERVER: init IAPBoard" << endl;
         board = STD_TR1::shared_ptr<IAPBoard>(new IAPBoard(config));
         cout << "SERVER: init IAPBoard done" << endl;
 
-        //sets up axis,...
         board->connect();
 
         boost::asio::io_service io_service;
@@ -296,5 +307,5 @@ int main(int argc, char** argv)
     }
 
     catch_int(0);
-    return ret;
+    return 0;
 }

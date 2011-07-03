@@ -26,40 +26,66 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <map>
+#include <boost/tokenizer.hpp>
 
 namespace helper {
-    std::string binary( unsigned long n );
+    using namespace std;
+
+    string binary( unsigned long n );
 
     //return value 0 = Success
     //            <0 = Failure
     template <class T>
-    int parse_triple(const std::string str, std::vector<T>& ret)
+    int parse_triple(const string str, vector<T>& ret)
     {
         bool contains_equalssign = find_if(str.begin(), str.end(),
                                            [](char c) { return( c == '='); }) != str.end();
 
         if(contains_equalssign) {
-            std::cerr << "parse_tripple with equalssign not supported yet" << std::endl;
+            cerr << "parse_tripple with equalssign not supported yet" << endl;
             return -1; //not supported
         }
 
         if(ret.size() < 3)
             return -2; //sise of return vector not valid
 
-        std::string word;
-        std::stringstream stream(str);
+        string word;
+        stringstream stream(str);
 
-        std::cout << "parse_triple(" << str << ") =";
+        cout << "parse_triple(" << str << ") =";
         for(int i=0; i< 3; ++i) {
             getline(stream, word, ',');
-            std::stringstream(word) >> ret[i];
-            std::cout << ret[i] << " ";
+            stringstream(word) >> ret[i];
+            cout << ret[i] << " ";
         }
-        std::cout << std::endl;
+        cout << endl;
 
         return 0;
     }
 
+
+    //return value 0 = Success
+    //            <0 = Failure
+    template <class T>
+    int parse_multiplett(const string str, map<string,T>& ret)
+    {
+        using namespace boost;
+        cout << "parse_multiplett(" << str << ") " << endl;
+
+        tokenizer<escaped_list_separator<char> > tok(str);
+        for(tokenizer<escaped_list_separator<char> >::iterator beg=tok.begin(); beg!=tok.end();++beg){
+            // cout << *beg << "\n";
+            string var = (*beg).substr(0,beg->find("="));
+            string value = (*beg).substr(beg->find("=")+1);
+            T tmp;
+            stringstream(value) >> tmp;
+            ret.insert(pair<string,T>(var,tmp));
+            cout << "var : " << var << " = " << tmp  << "\n";
+        }
+
+        return 0;
+    }
 };
 
 #endif

@@ -1,9 +1,7 @@
 *.o
 *~
 \#*\#
-libctb/build/release/
-libctb/lib/libctb-0.15.a
-libctb/lib/libctb-0.15.so
+libctb*
 IAP_server
 IAP_client_cli
 rs232/ctbtest

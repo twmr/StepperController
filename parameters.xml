@@ -16,8 +16,11 @@
      <LowerLimit>-4000000</LowerLimit>
      <UpperLimit>4000000</UpperLimit>
      <Position>0</Position>
-     <MotorStatus>0</MotorStatus>
      <Multiplier>400.0</Multiplier>
+     <UnitConversion>
+       <unitname>mm</unitname>
+       <factor>2.0</factor>
+     </UnitConversion>
    </axis>
    <axis id="2" descriptor="y">
      <BaseSpeed>100</BaseSpeed>
@@ -29,8 +32,11 @@
      <LowerLimit>-4000000</LowerLimit>
      <UpperLimit>4000000</UpperLimit>
      <Position>0</Position>
-     <MotorStatus>0</MotorStatus>
      <Multiplier>400.0</Multiplier>
+     <UnitConversion>
+       <unitname>mm</unitname>
+       <factor>2.0</factor>
+     </UnitConversion>
    </axis>
    <axis id="3" descriptor="height">
      <BaseSpeed>100</BaseSpeed>
@@ -42,7 +48,10 @@
      <LowerLimit>-19444</LowerLimit>
      <UpperLimit>19444</UpperLimit>
      <Position>0</Position>
-     <MotorStatus>0</MotorStatus>
      <Multiplier>194.444445</Multiplier>
+     <UnitConversion>
+       <unitname>mm</unitname>
+       <factor>2.0</factor>
+     </UnitConversion>
    </axis>
 </config>

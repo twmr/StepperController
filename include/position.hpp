@@ -22,10 +22,11 @@
 #ifndef __positions__
 #define __positions__
 
-//#include <boost/tuple/tuple.hpp>
+#include <boost/lexical_cast.hpp>
 #include <iostream>
 #include <vector>
 #include <exception>
+#include <map>
 
 class E_vector_dimension_too_small: public std::exception{
 public:
@@ -39,74 +40,117 @@ template <typename T>
 class DummyPosition
 {
 public:
+    typedef T type;
+    typedef std::map<size_t, std::string> id_desc_map_type;
+    typedef std::map<size_t, T> coord_type;
+
     DummyPosition() :
-        coordinates(3)
-        { };
+        coordinates() { };
 
-    DummyPosition(T x, T y, T t) :
-        coordinates(3)
+    DummyPosition(size_t dimension) :
+        coordinates()
         {
-            coordinates[0] = x;
-            coordinates[1] = y;
-            coordinates[2] = t;
-        };
-
-    //DummyPosition(const boost::tuple<T,T,T>& tp) :
-    //    x_(tp.get(0)), y_(tp.get(1)), theta_(tp.get(2))
-    //    { };
-
-    DummyPosition(const std::vector<T>& tvec) :
-        coordinates(tvec)
-        {
-            if (coordinates.size() < 3) {
-                throw E_vector_dimension_too_small();
+            for(size_t i = 0; i < dimension; i++) {
+                coordinates.insert(std::pair<size_t, T>(i, 0));
             }
         };
 
-    void PrintPosition() const
+    // DummyPosition(const std::map<size_t, std::string> &id_desc_map) :
+    //     coordinates()
+    //     {
+    //         for(std::map<size_t, std::string>::const_iterator itr = id_desc_map.begin();
+    //             itr != id_desc_map.end(); ++itr){
+    //             coordinates.insert(std::pair<size_t, T>((*itr).first, 0));
+    //         }
+    //     };
+
+    // DummyPosition(const std::map<std::string, T> &pos) :
+    //     coordinates()
+    //     {
+    //         for(typename std::map<std::string, T>::const_iterator itr = pos.begin();
+    //             itr != pos.end(); ++itr){
+    //             coordinates.insert(std::pair<size_t, T>(
+    //                                    boost::lexical_cast<size_t>((*itr).first), 0));
+    //         }
+    //     };
+
+    DummyPosition(const std::vector<size_t>& idvec) :
+        coordinates()
         {
-            std::cout << "Position: ( x: " << get_x() << " y: " << get_y() << " theta: "
-                      << get_theta() << " )" << std::endl;
+            for(std::vector<size_t>::const_iterator it = idvec.begin(); it != idvec.end(); ++it) {
+                coordinates.insert(std::pair<size_t, T>(*it, 0));
+            }
         };
 
-    void SetPosition(const T x, const T y, const T t)
+    typename coord_type::iterator begin() { return coordinates.begin(); };
+    typename coord_type::const_iterator begin() const { return coordinates.begin(); };
+    typename coord_type::iterator end() { return coordinates.end(); };
+    typename coord_type::const_iterator end() const { return coordinates.end(); };
+
+    void GetPositionString(char *buf) const
         {
-            coordinates[0] = x;
-            coordinates[1] = y;
-            coordinates[2] = t;
-        }
+            std::stringstream stream;
+            for(typename coord_type::const_iterator itr = begin();
+                itr != end(); ++itr){
+                stream << "axis" << (*itr).first << ": "
+                       << (*itr).second << "\n";
+            }
 
-    const T get_x() const { return coordinates[0]; };
-    const T get_y() const { return coordinates[1]; };
-    const T get_theta() const { return coordinates[2]; };
+            strcpy(buf, stream.str().c_str());
+        };
 
-    typedef T type;
+    void GetPositionString(char *buf, id_desc_map_type& map) const
+        {
+            std::stringstream stream;
+            for(typename coord_type::const_iterator itr = begin();
+                itr != end(); ++itr){
+                stream << "axis " << map[(*itr).first] << ": "
+                       << (*itr).second << "\n";
+            }
+
+            strcpy(buf, stream.str().c_str());
+        };
+
+    // void PrintPosition(coord_map_type& coord_map) const
+    //     {
+    //         std::cout << "Position: (";
+
+    //         for(std::map<size_t, std::string>::const_iterator itr = coordinates.begin();
+    //             itr != coordinates.end(); ++itr){
+    //                       std::cout << coord_map[(*itr).first] << " = "
+    //                       << (*itr).second << "\t";
+    //         }
+    //         std::cout << " )" << std::endl;
+    //     };
+
+
+    void SetCoordinate(const size_t id, const T val)
+        {
+            if( coordinates.find(id) != coordinates.end())
+                coordinates[id] = val;
+            else
+                coordinates.insert(std::pair<size_t, T>(id,val));
+        };
+
+    const T GetCoordinate(const size_t id) const { return coordinates.find(id)->second; };
+
+    // const T GetCoordinate(const std::string desc) const
+    //     { return GetCoordinate(GetID(desc)); };
+
+
+
 
 private:
-    //TODO replace this with a hash_map or unordered_map!!!
-    std::vector<T> coordinates;
+    //FIXME replace this with a hash_map or unordered_map!!!
+    size_t GetID(const std::string& desc)
+        {
+            return 1;
+        }
+
+    coord_type coordinates;
 };
 
 typedef DummyPosition<short> BarePosition; //units that the stepper board understands
 typedef DummyPosition<float> Position; //units that we understand
-
-class ConversionConstants
-{
-public:
-    ConversionConstants() :
-        xconv_(1.0), yconv_(1.0), thetaconv_(1.0)
-        { };
-
-    ConversionConstants(double xc, double yc, double thetac) :
-        xconv_(xc), yconv_(yc), thetaconv_(thetac)
-        { };
-
-    void get_bare_position(BarePosition& ret, const Position &pos) const;
-    void get_position(Position& ret, const BarePosition &bpos) const;
-    void set_constants(const std::vector<double>& cvec);
-    double xconv_;
-    double yconv_;
-    double thetaconv_;
-};
 
 #endif

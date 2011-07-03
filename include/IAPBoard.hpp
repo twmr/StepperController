@@ -47,13 +47,48 @@ static const char* pm381_err_string[E_LAST] = {
 
 /* forward declatrions */
 class RS232;
+class IAPBoard;
+
+class Axis
+{
+public:
+    Axis(const boost::property_tree::ptree &, IAPBoard*);
+    ~Axis() {};
+    const size_t get_id() const { return ID_; };
+    const std::string get_desc() const { return Desc_; };
+    const double get_factor() const { return UnitFactor_; };
+    void printAxis(void) const;
+    int UpdateConfiguration(void) const;
+
+    void move_rel(const BarePosition::type) const;
+    void move_abs(const BarePosition::type) const;
+
+private:
+    boost::property_tree::ptree axispt_;
+    size_t ID_;
+    std::string Desc_;
+
+    std::string UnitName_;
+    double UnitFactor_;
+    long BaseSpeed_;
+    long SlewSpeed_;
+    long SlowJogSpeed_;
+    long FastJogSpeed_;
+    long CreepSteps_;
+    long Accel_;
+    long LowerLimit_;
+    long UpperLimit_;
+    long Position_;
+    IAPBoard* Board_;
+};
+
+
 
 class IAPconfig {
 public:
     IAPconfig(const std::string & configfile);
     ~IAPconfig() {
-        system("rm lala");
-//        std::cout << "LLLLLLLLLLLLLLLLLLL" << std::endl;
+        std::cout << "LLLLLLLLLLLLLLLLLLL" << std::endl;
     };
 
     void writeconfig() const;
@@ -115,10 +150,8 @@ public:
     void connect();
     void disconnect();
     int initAxes();
-    int getaxisnum() const;
+    size_t GetAxisID() const;
     int setaxisnum(const unsigned int);
-    STD_TR1::shared_ptr<ConversionConstants> getConversionConstants() const
-        { return convconsts; };
 
     void move_rel(const Position& deltaPos);
     void move_to(const Position& absPos);
@@ -133,37 +166,56 @@ public:
     bool is_connected() { return connected; };
     int SetZero();
 
-    size_t GetNrOfAxes(void) const { return NR_AXES; };
+    size_t GetNrOfAxes(void) const { return axes.size(); };
+
+    BarePosition createBarePosition(void) const;
+    Position createPosition(void) const;
+
+    // conversion stuff
+    void conv2bareposition(BarePosition& ret, const Position &pos) const;
+    void conv2postion(Position& ret, const BarePosition &bpos) const;
+
+    Axis* getAxis(const size_t id);
+    Axis* getAxis(const std::string desc);
+
+    void SaveEnvironment();
+    void RestoreEnvironment();
 
     const char *get_err_string(pm381_err_t type) {
         if(type >= E_LAST || type < 0)
             return "BUG: error string not valid";
         else
             return pm381_err_string[type]; };
+
+    typedef std::vector<Axis>::iterator axesiter;
+    typedef std::vector<Axis>::const_iterator const_axesiter;
+
+    std::map<size_t, std::string> get_coord_map()
+        { return coordinate_map; };
+
+    std::map<std::string, size_t> get_inv_coord_map()
+        { return inv_coordinate_map; };
+
+
+
 private:
     std::string send_lowlevel(const std::string&) const;
-    static const size_t NR_AXES = 3;  // 3 axis are currently controlled by the IAP Board
     bool connected;
     STD_TR1::shared_ptr< RS232 > serial_interface;
     STD_TR1::shared_ptr< std::mutex > boardmutex;
-    STD_TR1::shared_ptr<ConversionConstants> convconsts;
     IAPconfig &config_;
+    std::map<size_t, std::string> coordinate_map;
+    std::map<std::string, size_t> inv_coordinate_map;
+    // std::map<size_t, BarePosition::type> bp_coordiante_map;
+    // std::map<size_t, Position::type> p_coordiante_map;
 
-    struct mct_Axis {
-        long axis_BaseSpeed;
-        long axis_SlewSpeed;
-        long axis_SlowJogSpeed;
-        long axis_FastJogSpeed;
-        long axis_CreepSteps;
-        long axis_Accel;
-        long axis_LowerLimit;
-        long axis_UpperLimit;
-        long axis_Position;
-        char axis_MotorStatus;  /* currently unused */
-        double axis_Multiplier;
-    } axis[NR_AXES];
+    struct Environment
+    {
+        size_t axis_id;
+    } envion;
 
-    struct mct_Axis *curaxis;
+    std::vector<Axis> axes;
+    Axis *curaxis;
 };
 
 #endif
