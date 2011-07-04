@@ -176,8 +176,8 @@ public:
 
     // Axis* getAxis(const size_t id);
     // Axis* getAxis(const std::string desc);
-    Axis const * const getAxis(const size_t id) const;
-    Axis const * const getAxis(const std::string desc) const;
+    const Axis * getAxis(const size_t id) const;
+    const Axis * getAxis(const std::string desc) const;
 
     void SaveEnvironment() const;
     void RestoreEnvironment() const;

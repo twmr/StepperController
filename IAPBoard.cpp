@@ -159,8 +159,13 @@ void IAPBoard::connect()
 
     std::cout << "set number of channels to : " << GetNrOfAxes() << std::endl;
 
-    //TODO write GetMaxID function
-    send_command_quiet("1NC" + boost::lexical_cast<std::string>(GetNrOfAxes()));
+    //get the max axis ID
+    std::vector<Axis>::iterator itor =
+        std::max_element(axes.begin(), axes.end(),
+                         [](Axis &i1, Axis &i2) {
+                             return i1.get_id() < i2.get_id(); });
+
+    send_command_quiet("1NC" + boost::lexical_cast<std::string>(itor->get_id()));
 
     std::cout << "initialize axes parameters" << std::endl;
     initAxes();
@@ -364,7 +369,7 @@ int IAPBoard::initAxes()
 //     return (it == axes.end()) ? NULL : &(*it);
 // }
 
-Axis const * const IAPBoard::getAxis(const size_t id) const
+const Axis * IAPBoard::getAxis(const size_t id) const
 {
 
     const_axesiter it = find_if(axes.begin(),axes.end(),
@@ -372,7 +377,7 @@ Axis const * const IAPBoard::getAxis(const size_t id) const
     return (it == axes.end()) ? NULL : &(*it);
 }
 
-Axis const * const IAPBoard::getAxis(const std::string desc) const
+const Axis * IAPBoard::getAxis(const std::string desc) const
 {
     const_axesiter it = find_if(axes.begin(),axes.end(),
                           [=](const Axis& ax) { return( ax.get_desc() == desc); });

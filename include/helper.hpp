@@ -45,16 +45,16 @@ namespace helper {
         cout << "parse_multiplett(" << str << ") " << endl;
 
 
-        if(!string_contains(str,'=')) {
-            cerr << "parse_multiplet without equalssign not supported yet" << endl;
+        if(!string_contains(str,delim)) {
+            cerr << "parse_multiplet without delimiter not supported yet" << endl;
             return -1; //not supported
         }
 
         tokenizer<escaped_list_separator<char> > tok(str);
         for(tokenizer<escaped_list_separator<char> >::iterator beg=tok.begin(); beg!=tok.end();++beg){
             // cout << *beg << "\n";
-            string var = beg->substr(0, beg->find("="));
-            string value = beg->substr(beg->find("=")+1);
+            string var = beg->substr(0, beg->find(delim));
+            string value = beg->substr(beg->find(delim)+1);
 
             // remove whitespaces
             trim(var);
