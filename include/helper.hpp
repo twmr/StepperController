@@ -28,56 +28,38 @@
 #include <iostream>
 #include <map>
 #include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp> // for trim function
 
 namespace helper {
     using namespace std;
 
     string binary( unsigned long n );
+    bool string_contains(const string& str, const char c);
 
     //return value 0 = Success
     //            <0 = Failure
     template <class T>
-    int parse_triple(const string str, vector<T>& ret)
-    {
-        bool contains_equalssign = find_if(str.begin(), str.end(),
-                                           [](char c) { return c == '='; }) != str.end();
-
-        if(contains_equalssign) {
-            cerr << "parse_tripple with equalssign not supported yet" << endl;
-            return -1; //not supported
-        }
-
-        if(ret.size() < 3)
-            return -2; //sise of return vector not valid
-
-        string word;
-        stringstream stream(str);
-
-        cout << "parse_triple(" << str << ") =";
-        for(int i=0; i< 3; ++i) {
-            getline(stream, word, ',');
-            stringstream(word) >> ret[i];
-            cout << ret[i] << " ";
-        }
-        cout << endl;
-
-        return 0;
-    }
-
-
-    //return value 0 = Success
-    //            <0 = Failure
-    template <class T>
-    int parse_multiplett(const string str, map<string,T>& ret)
+    int parse_multiplett(const string str, map<string,T>& ret, const char delim='=')
     {
         using namespace boost;
         cout << "parse_multiplett(" << str << ") " << endl;
 
+
+        if(!string_contains(str,'=')) {
+            cerr << "parse_multiplet without equalssign not supported yet" << endl;
+            return -1; //not supported
+        }
+
         tokenizer<escaped_list_separator<char> > tok(str);
         for(tokenizer<escaped_list_separator<char> >::iterator beg=tok.begin(); beg!=tok.end();++beg){
             // cout << *beg << "\n";
-            string var = (*beg).substr(0,beg->find("="));
-            string value = (*beg).substr(beg->find("=")+1);
+            string var = beg->substr(0, beg->find("="));
+            string value = beg->substr(beg->find("=")+1);
+
+            // remove whitespaces
+            trim(var);
+            trim(value);
+
             T tmp;
             stringstream(value) >> tmp;
             ret.insert(pair<string,T>(var,tmp));

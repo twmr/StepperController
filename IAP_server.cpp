@@ -201,8 +201,8 @@ void session::process_msg(msg_t& message)
             return;
         }
 
-        // movement commands
-        if (boost::starts_with(data, "ma ")) { // move abs
+        // movement commands (aboslute and relative)
+        if (boost::starts_with(data, "ma ") || boost::starts_with(data, "mr ")) {
             std::string tmp = data.substr(3);
             std::map<std::string, Position::type> posmap;
 
@@ -232,24 +232,15 @@ void session::process_msg(msg_t& message)
                     std::cout << it->first << ": " << it->second << " ";
                 std::cout << std::endl;
 
-                board->move_to(mypos);
+                if(data[1] == 'a') // absolute move
+                    board->move_to(mypos);
+                else // data[1] = 'r'  -> relative move
+                    board->move_rel(mypos);
+
                 prepare_tcp_message("Success");
             }
             else
                 prepare_tcp_message("parse_multiplett_failure");
-
-            return;
-        }
-        else if (boost::starts_with(data, "mr ")) { // move relative
-            std::string tmp = data.substr(3);
-            std::vector<Position::type> posvec(3);
-
-            if(!helper::parse_triple<Position::type>(tmp, posvec)) {
-                board->move_rel(Position(3));
-                prepare_tcp_message("Success");
-            }
-            else
-                prepare_tcp_message("parse_triple_failure");
 
             return;
         }
@@ -296,8 +287,9 @@ int main(int argc, char** argv)
     if(argc > 1)
         configfilename = argv[1];
 
-    std::cout << "parsing MOVES xml config file: " << configfilename << std::endl;
+    std::cout << "parsing MOVES xml config file ... " << configfilename;
     static IAPconfig config(configfilename);
+    std::cout << "done" << std::endl;
 
     try
     {

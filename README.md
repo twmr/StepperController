@@ -89,6 +89,7 @@ y:
 
 TODO:
 -----
+* remove Multiplier xml element from parameters.xml
 * Windows build support
 * generalize the client and server programs
 * Documentation

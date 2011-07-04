@@ -152,7 +152,7 @@ private:
     coord_type coordinates;
 };
 
-typedef DummyPosition<short> BarePosition; //units that the stepper board understands
+typedef DummyPosition<long> BarePosition; //units that the stepper board understands
 typedef DummyPosition<float> Position; //units that we understand
 
 #endif

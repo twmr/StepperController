@@ -124,10 +124,12 @@ IAPBoard::IAPBoard(IAPconfig& conf) :
             if(v.first.data() != string("axis")) continue;
 
             axes.push_back(Axis(v.second, this));
-            //std::cout << "parsing axis "<< v.second.get_id() << "  : " << v.second.get_desc() << endl;
             std::cout << "parsing axis "<< axes.back().get_id() << "  : " << axes.back().get_desc() << endl;
+
+            //creating bidirectional maps for axis descriptor <-> axis id conversion
             coordinate_map.insert(pair<size_t,string>(axes.back().get_id(), axes.back().get_desc()));
             inv_coordinate_map.insert(pair<string,size_t>(axes.back().get_desc(), axes.back().get_id()));
+
             iap_default_position.SetCoordinate(axes.back().get_id(), 0);
             iap_default_bareposition.SetCoordinate(axes.back().get_id(), 0);
         }
@@ -335,7 +337,7 @@ void IAPBoard::SaveEnvironment() const
 void IAPBoard::RestoreEnvironment() const
 {
     //restore saved axis
-    setaxisnum(envion.axis_id);
+    save_setaxisnum(envion.axis_id);
 }
 
 int IAPBoard::initAxes()
@@ -377,7 +379,7 @@ Axis const * const IAPBoard::getAxis(const std::string desc) const
     return (it == axes.end()) ? NULL : &(*it);
 }
 
-int IAPBoard::setaxisnum(const size_t id) const
+int IAPBoard::setaxisnum(const size_t id)
 {
     int ret = 0;
 
@@ -394,6 +396,23 @@ int IAPBoard::setaxisnum(const size_t id) const
     return ret;
 }
 
+//this function is intended to be called only within a SAVE/RESTORE environment block
+int IAPBoard::save_setaxisnum(const size_t id) const
+{
+    int ret = 0;
+
+    Axis const * const aptr = getAxis(id);
+    if(!aptr) {
+        std::cout << id << " is not a valid axis id" << std::endl;
+        ret = -E_AXIS_NUM_INVALID;
+    }
+
+    ret = send_command_quiet("1CH" + boost::lexical_cast<std::string>(id));
+    if(ret >= 0)
+        save_curaxis = const_cast<Axis *>(aptr);
+
+    return ret;
+}
 
 void IAPBoard::move_rel(const Position& rel) const
 {
@@ -409,7 +428,7 @@ void IAPBoard::move_rel(const BarePosition& rel) const
 
     for(BarePosition::coord_type::const_iterator
             it = rel.begin(); it != rel.end(); ++it) {
-        setaxisnum(it->first);
+        save_setaxisnum(it->first);
         getAxis(it->first)->move_rel(it->second);
     }
 
@@ -430,7 +449,7 @@ void IAPBoard::move_to(const BarePosition& abs) const
 
     for(BarePosition::coord_type::const_iterator
             it = abs.begin(); it != abs.end(); ++it) {
-        setaxisnum(it->first);
+        save_setaxisnum(it->first);
         getAxis(it->first)->move_abs(it->second);
     }
 
@@ -461,7 +480,6 @@ void IAPBoard::get_cur_position(BarePosition& retbarepos) const
     boost::sregex_token_iterator tokens(line.begin(),line.end(),re);
     boost::sregex_token_iterator end;
 
-    // for (size_t id=1; id <= GetNrOfAxes(); id++, ++tokens){
     for(; tokens != end; ++tokens) {
 
         std::cout << "gcp tokens: " << *tokens << std::endl;
@@ -506,14 +524,14 @@ void IAPBoard::reset()
 
 
 //Send Command 1SP0 to each axis
-int IAPBoard::SetZero()
+int IAPBoard::SetZero() const
 {
     std::cout << "board: set current positon to zero" << std::endl;
     SaveEnvironment();
 
-    for(axesiter it = axes.begin(); it != axes.end(); ++it)
+    for(const_axesiter it = axes.begin(); it != axes.end(); ++it)
     {
-        int ret = setaxisnum(it->get_id());
+        int ret = save_setaxisnum(it->get_id());
         if (ret < 0){
             RestoreEnvironment();
             return ret;

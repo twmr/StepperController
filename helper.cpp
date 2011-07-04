@@ -35,4 +35,10 @@ namespace helper {
 
         return std::string(result);
     }
+
+    bool string_contains(const string& str, const char c)
+    {
+        return find_if(str.begin(), str.end(),
+                       [&](char sc) { return sc == c; }) != str.end();
+    }
 };

@@ -150,7 +150,7 @@ public:
     void disconnect();
     int initAxes();
     size_t GetAxisID() const;
-    int setaxisnum(const size_t) const;
+    int setaxisnum(const size_t);
 
     void move_rel(const Position& deltaPos) const;
     void move_to(const Position& absPos) const;
@@ -163,7 +163,7 @@ public:
     IAPconfig& getConfig() const { return config_; };
 
     bool is_connected() { return connected; };
-    int SetZero();
+    int SetZero() const;
 
     size_t GetNrOfAxes(void) const { return axes.size(); };
 
@@ -200,6 +200,7 @@ public:
 
 
 private:
+    int save_setaxisnum(const size_t) const;
     std::string send_lowlevel(const std::string&) const;
     bool connected;
     STD_TR1::shared_ptr< RS232 > serial_interface;
@@ -216,7 +217,8 @@ private:
     } envion;
 
     std::vector<Axis> axes;
-    mutable Axis *curaxis;
+    Axis *curaxis;
+    mutable Axis *save_curaxis;
 
     Position iap_default_position;
     BarePosition iap_default_bareposition;
