@@ -287,8 +287,18 @@ int main(int argc, char** argv)
     if(argc > 1)
         configfilename = argv[1];
 
+    {
+        ifstream is(configfilename);
+        if(!is) {
+            std::cerr << "can't open " << configfilename << std::endl;
+            return -1;
+        }
+    }
+
     std::cout << "parsing MOVES xml config file ... " << configfilename;
+
     static IAPconfig config(configfilename);
+
     std::cout << "done" << std::endl;
 
     try
