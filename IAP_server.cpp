@@ -207,20 +207,32 @@ void session::process_msg(msg_t& message)
             std::map<std::string, Position::type> posmap;
 
             if(!helper::parse_multiplett<Position::type>(tmp, posmap)) {
-                Position mypos();
-                std::map<std::string,size_t> string_id_map = board->get_inv_coord_map();
+                Position mypos;
+                std::map<std::string,size_t>& string_id_map = board->get_inv_coord_map();
 
                 for(std::map<std::string, Position::type>::const_iterator it = posmap.begin();
                     it != posmap.end(); ++it){
+
+                    //check that the entered axis descriptor is valid
+                    if(string_id_map.find(it->first) == string_id_map.end()) {
+                        prepare_tcp_message("entered position has an invalid axis descriptor");
+                        return;
+                    }
+
                     mypos.SetCoordinate(string_id_map[(*it).first], (*it).second);
+                }
+
+                if(mypos.size() == 0) {
+                    prepare_tcp_message("entered position is not valid");
+                    return;
                 }
 
                 std::cout << "MYPOS: ";
                 for(Position::coord_type::const_iterator it = mypos.begin(); it != mypos.end(); ++it)
-                    std::cout << it->first << ": " << it->second;
+                    std::cout << it->first << ": " << it->second << " ";
                 std::cout << std::endl;
 
-                board->move_to(Position(abspos));
+                board->move_to(mypos);
                 prepare_tcp_message("Success");
             }
             else

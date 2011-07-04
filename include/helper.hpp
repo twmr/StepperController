@@ -40,7 +40,7 @@ namespace helper {
     int parse_triple(const string str, vector<T>& ret)
     {
         bool contains_equalssign = find_if(str.begin(), str.end(),
-                                           [](char c) { return( c == '='); }) != str.end();
+                                           [](char c) { return c == '='; }) != str.end();
 
         if(contains_equalssign) {
             cerr << "parse_tripple with equalssign not supported yet" << endl;

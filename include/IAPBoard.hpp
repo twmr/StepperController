@@ -26,7 +26,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/foreach.hpp>
 #include "global.hpp"
-#include "exceptions.hpp"
 #include "position.hpp"
 #include <iostream>
 
@@ -54,9 +53,9 @@ class Axis
 public:
     Axis(const boost::property_tree::ptree &, IAPBoard*);
     ~Axis() {};
-    const size_t get_id() const { return ID_; };
-    const std::string get_desc() const { return Desc_; };
-    const double get_factor() const { return UnitFactor_; };
+    size_t get_id() const { return ID_; };
+    std::string get_desc() const { return Desc_; };
+    double get_factor() const { return UnitFactor_; };
     void printAxis(void) const;
     int UpdateConfiguration(void) const;
 
@@ -151,12 +150,12 @@ public:
     void disconnect();
     int initAxes();
     size_t GetAxisID() const;
-    int setaxisnum(const unsigned int);
+    int setaxisnum(const size_t) const;
 
-    void move_rel(const Position& deltaPos);
-    void move_to(const Position& absPos);
-    void move_rel(const BarePosition& deltaPos);
-    void move_to(const BarePosition& absPos);
+    void move_rel(const Position& deltaPos) const;
+    void move_to(const Position& absPos) const;
+    void move_rel(const BarePosition& deltaPos) const;
+    void move_to(const BarePosition& absPos) const;
 
     void get_cur_position(BarePosition& retbarepos) const;
     void get_cur_position(Position& retpos) const;
@@ -175,11 +174,13 @@ public:
     void conv2bareposition(BarePosition& ret, const Position &pos) const;
     void conv2postion(Position& ret, const BarePosition &bpos) const;
 
-    Axis* getAxis(const size_t id);
-    Axis* getAxis(const std::string desc);
+    // Axis* getAxis(const size_t id);
+    // Axis* getAxis(const std::string desc);
+    Axis const * const getAxis(const size_t id) const;
+    Axis const * const getAxis(const std::string desc) const;
 
-    void SaveEnvironment();
-    void RestoreEnvironment();
+    void SaveEnvironment() const;
+    void RestoreEnvironment() const;
 
     const char *get_err_string(pm381_err_t type) {
         if(type >= E_LAST || type < 0)
@@ -190,10 +191,10 @@ public:
     typedef std::vector<Axis>::iterator axesiter;
     typedef std::vector<Axis>::const_iterator const_axesiter;
 
-    std::map<size_t, std::string> get_coord_map()
+    std::map<size_t, std::string>& get_coord_map()
         { return coordinate_map; };
 
-    std::map<std::string, size_t> get_inv_coord_map()
+    std::map<std::string, size_t>& get_inv_coord_map()
         { return inv_coordinate_map; };
 
 
@@ -209,13 +210,16 @@ private:
     // std::map<size_t, BarePosition::type> bp_coordiante_map;
     // std::map<size_t, Position::type> p_coordiante_map;
 
-    struct Environment
+    mutable struct Environment
     {
         size_t axis_id;
     } envion;
 
     std::vector<Axis> axes;
-    Axis *curaxis;
+    mutable Axis *curaxis;
+
+    Position iap_default_position;
+    BarePosition iap_default_bareposition;
 };
 
 #endif

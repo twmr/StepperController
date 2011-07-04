@@ -29,7 +29,6 @@
 
 #include "ctb-0.15/ctb.h"
 #include "global.hpp"
-#include "exceptions.hpp"
 
 class RS232 {
 public:

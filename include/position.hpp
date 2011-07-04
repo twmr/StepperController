@@ -87,6 +87,8 @@ public:
     typename coord_type::iterator end() { return coordinates.end(); };
     typename coord_type::const_iterator end() const { return coordinates.end(); };
 
+    size_t size() const { return coordinates.size(); };
+
     void GetPositionString(char *buf) const
         {
             std::stringstream stream;

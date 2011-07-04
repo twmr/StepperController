@@ -13,7 +13,7 @@ MAINO= IAPBoard.o \
 
 
 IAP_server: IAP_server.o ${MAINO}
-	$(CC)  ${MAINO} ${CCFLAGS} -lctb-0.16 -lboost_regex -lboost_thread-mt -lboost_system $< -o $@
+	$(CC)  ${MAINO} ${CCFLAGS} -lctb-0.15 -lboost_regex -lboost_thread-mt -lboost_system $< -o $@
 
 IAP_client_cli: IAP_client_cli.o
 	$(CC)  ${CCFLAGS} -lboost_system $< -o $@
@@ -23,9 +23,9 @@ ctb.o: ctb.cpp
 	${CC} $< ${CCFLAGS} ${EXTRAFLAGS} -Iinclude -c -o $@
 
 %.o: %.cpp %.hpp
-	${CC} $< ${CCFLAGS} -Iinclude -c -o $@
+	${CC} $< ${CCFLAGS} $(EXTRAFLAGS) -Iinclude -c -o $@
 %.o: %.cpp 
-	${CC} $< ${CCFLAGS} -Iinclude -c -o $@
+	${CC} $< ${CCFLAGS} $(EXTRAFLAGS) -Iinclude -c -o $@
 
 
 clean:

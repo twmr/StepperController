@@ -108,7 +108,9 @@ IAPBoard::IAPBoard(IAPconfig& conf) :
     config_(conf),
     coordinate_map(),
     axes(),
-    curaxis(NULL)
+    curaxis(NULL),
+    iap_default_position(),
+    iap_default_bareposition()
 {
 
     using boost::property_tree::ptree;
@@ -125,6 +127,9 @@ IAPBoard::IAPBoard(IAPconfig& conf) :
             //std::cout << "parsing axis "<< v.second.get_id() << "  : " << v.second.get_desc() << endl;
             std::cout << "parsing axis "<< axes.back().get_id() << "  : " << axes.back().get_desc() << endl;
             coordinate_map.insert(pair<size_t,string>(axes.back().get_id(), axes.back().get_desc()));
+            inv_coordinate_map.insert(pair<string,size_t>(axes.back().get_desc(), axes.back().get_id()));
+            iap_default_position.SetCoordinate(axes.back().get_id(), 0);
+            iap_default_bareposition.SetCoordinate(axes.back().get_id(), 0);
         }
     } catch (std::exception &e) {
         cerr << "Exception string: " << e.what() << endl;
@@ -275,37 +280,51 @@ int IAPBoard::send_getint_command(const std::string & cmd) const
 
 BarePosition IAPBoard::createBarePosition(void) const
 {
-    static BarePosition iap_default_bareposition(coordinate_map);
     return iap_default_bareposition;
 }
 
 Position IAPBoard::createPosition(void) const
 {
-    static Position iap_default_position(coordinate_map);
     return iap_default_position;
 }
 
 
 void IAPBoard::conv2bareposition(BarePosition& ret, const Position &pos) const
 {
-    for(const_axesiter it = axes.begin(); it != axes.end(); ++it)
-        ret.SetCoordinate(it->get_id(),
+    for(Position::coord_type::const_iterator
+            it = pos.begin(); it != pos.end(); ++it) {
+
+        //check that axis is registered, otherwise we can't obtain the
+        //conversionfactor
+        if(!getAxis(it->first)) return;
+
+        ret.SetCoordinate(it->first,
                           static_cast<BarePosition::type>(
-                              pos.GetCoordinate(it->get_id())/
-                              it->get_factor()));
+                              pos.GetCoordinate(it->first)/
+                              getAxis(it->first)->get_factor()));
+    }
 }
 
 void IAPBoard::conv2postion(Position& ret, const BarePosition &bpos) const
 {
-    for(const_axesiter it = axes.begin(); it != axes.end(); ++it)
-        ret.SetCoordinate(it->get_id(),
+    // for(const_axesiter it = axes.begin(); it != axes.end(); ++it)
+    for(BarePosition::coord_type::const_iterator
+            it = bpos.begin(); it != bpos.end(); ++it) {
+
+        //check that axis is registered, otherwise we can't obtain the
+        //conversionfactor
+        if(!getAxis(it->first)) return;
+
+        ret.SetCoordinate(it->first,
                           static_cast<Position::type>(
-                              bpos.GetCoordinate(it->get_id())*
-                              it->get_factor()));
+                              bpos.GetCoordinate(it->first)*
+                              getAxis(it->first)->get_factor()));
+    }
+
 }
 
 
-void IAPBoard::SaveEnvironment()
+void IAPBoard::SaveEnvironment() const
 {
     if(!curaxis) return;
 
@@ -313,7 +332,7 @@ void IAPBoard::SaveEnvironment()
     envion.axis_id = curaxis->get_id();
 }
 
-void IAPBoard::RestoreEnvironment()
+void IAPBoard::RestoreEnvironment() const
 {
     //restore saved axis
     setaxisnum(envion.axis_id);
@@ -329,25 +348,40 @@ int IAPBoard::initAxes()
     return 0;
 }
 
-Axis* IAPBoard::getAxis(const size_t id)
+// Axis* IAPBoard::getAxis(const size_t id)
+// {
+//     axesiter it = find_if(axes.begin(),axes.end(),
+//                           [=](Axis& ax) { return( ax.get_id() == id); });
+//     return (it == axes.end()) ? NULL : &(*it);
+// }
+
+// Axis* IAPBoard::getAxis(const std::string desc)
+// {
+//     axesiter it = find_if(axes.begin(),axes.end(),
+//                           [=](Axis& ax) { return( ax.get_desc() == desc); });
+//     return (it == axes.end()) ? NULL : &(*it);
+// }
+
+Axis const * const IAPBoard::getAxis(const size_t id) const
 {
-    axesiter it = find_if(axes.begin(),axes.end(),
-                          [=](Axis& ax) { return( ax.get_id() == id); });
+
+    const_axesiter it = find_if(axes.begin(),axes.end(),
+                          [=](const Axis& ax) { return( ax.get_id() == id); });
     return (it == axes.end()) ? NULL : &(*it);
 }
 
-Axis* IAPBoard::getAxis(const std::string desc)
+Axis const * const IAPBoard::getAxis(const std::string desc) const
 {
-    axesiter it = find_if(axes.begin(),axes.end(),
-                          [=](Axis& ax) { return( ax.get_desc() == desc); });
+    const_axesiter it = find_if(axes.begin(),axes.end(),
+                          [=](const Axis& ax) { return( ax.get_desc() == desc); });
     return (it == axes.end()) ? NULL : &(*it);
 }
 
-int IAPBoard::setaxisnum(const size_t id)
+int IAPBoard::setaxisnum(const size_t id) const
 {
     int ret = 0;
 
-    Axis* aptr = getAxis(id);
+    Axis const * const aptr = getAxis(id);
     if(!aptr) {
         std::cout << id << " is not a valid axis id" << std::endl;
         ret = -E_AXIS_NUM_INVALID;
@@ -355,49 +389,49 @@ int IAPBoard::setaxisnum(const size_t id)
 
     ret = send_command_quiet("1CH" + boost::lexical_cast<std::string>(id));
     if(ret >= 0)
-        curaxis = aptr;
+        curaxis = const_cast<Axis *>(aptr);
 
     return ret;
 }
 
 
-void IAPBoard::move_rel(const Position& rel)
+void IAPBoard::move_rel(const Position& rel) const
 {
-    BarePosition bp = createBarePosition();
+    BarePosition bp;
     conv2bareposition(bp, rel);
     move_rel(bp);
 }
 
 //TODO implement/check SOFT_LIMITS
-void IAPBoard::move_rel(const BarePosition& rel)
+void IAPBoard::move_rel(const BarePosition& rel) const
 {
     SaveEnvironment();
 
-    for(axesiter it = axes.begin(); it != axes.end(); ++it)
-    {
-        setaxisnum(it->get_id());
-        it->move_rel(rel.GetCoordinate(it->get_id()));
+    for(BarePosition::coord_type::const_iterator
+            it = rel.begin(); it != rel.end(); ++it) {
+        setaxisnum(it->first);
+        getAxis(it->first)->move_rel(it->second);
     }
 
     RestoreEnvironment();
 }
 
-void IAPBoard::move_to(const Position& abs)
+void IAPBoard::move_to(const Position& abs) const
 {
-    BarePosition bp = createBarePosition();
+    BarePosition bp;
     conv2bareposition(bp, abs);
     move_to(bp);
 }
 
 //TODO implement/check SOFT_LIMITS
-void IAPBoard::move_to(const BarePosition& abs)
+void IAPBoard::move_to(const BarePosition& abs) const
 {
     SaveEnvironment();
 
-    for(axesiter it = axes.begin(); it != axes.end(); ++it)
-    {
-        setaxisnum(it->get_id());
-        it->move_abs(abs.GetCoordinate(it->get_id()));
+    for(BarePosition::coord_type::const_iterator
+            it = abs.begin(); it != abs.end(); ++it) {
+        setaxisnum(it->first);
+        getAxis(it->first)->move_abs(it->second);
     }
 
     RestoreEnvironment();
@@ -409,10 +443,13 @@ void IAPBoard::get_cur_position(BarePosition& retbarepos) const
     //only for PM381
     char buf[128];
     send_command("1QP",buf);
+#ifndef SERIAL_DEBUG
     const std::string line(buf);
+#else
+    const std::string line("    Channel 5 = 7352\n        Channel 3 = 2000\n        Channel 1 = 3900\n        Channel 4 = 0\n        Channel 2 = 1207\n");
+#endif
 
-    //FIXME parse id!
-    const boost::regex re("= [-]?\\d+");
+    const boost::regex re("\\d = [-]?\\d+");
 
     // for(size_t i=0; i < line.length(); ++i)
     // {
@@ -424,17 +461,18 @@ void IAPBoard::get_cur_position(BarePosition& retbarepos) const
     boost::sregex_token_iterator tokens(line.begin(),line.end(),re);
     boost::sregex_token_iterator end;
 
-    for (size_t id=1; id <= GetNrOfAxes(); id++, ++tokens){
-        if(tokens == end) {
-            std::cerr << "WARNING: parsing in get_cur_position failed" << std::endl;
-            return;
-        }
+    // for (size_t id=1; id <= GetNrOfAxes(); id++, ++tokens){
+    for(; tokens != end; ++tokens) {
 
         std::cout << "gcp tokens: " << *tokens << std::endl;
-        std::stringstream tmp(tokens->str().substr(1));
+        std::stringstream ssval(tokens->str().substr(3));
+        std::stringstream ssid(tokens->str().substr(0,1));
         BarePosition::type val;
-        tmp >> val;
-        retbarepos.SetCoordinate(id,val);
+        size_t id;
+        ssval >> val;
+        ssid >> id;
+        if(coordinate_map.find(id) != coordinate_map.end())
+            retbarepos.SetCoordinate(id,val);
     }
 }
 
