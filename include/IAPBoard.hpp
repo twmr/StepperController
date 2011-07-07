@@ -86,9 +86,7 @@ private:
 class IAPconfig {
 public:
     IAPconfig(const std::string & configfile);
-    ~IAPconfig() {
-        std::cout << "LLLLLLLLLLLLLLLLLLL" << std::endl;
-    };
+    ~IAPconfig() { };
 
     void writeconfig() const;
 
@@ -115,7 +113,7 @@ public:
             if(v.first.data() != std::string("axis")) continue;
 
             size_t id = v.second.get<size_t>("<xmlattr>.id");
-            std::cout << id << "found" << std::endl;
+            //std::cout << id << "found" << std::endl;
             if( id != axnr )
                 continue;
 

@@ -6,6 +6,9 @@
       <protocol>8N1</protocol>
       <baudrate>9600</baudrate>
    </rs232>
+   <server>
+     <port>16000</port>
+   </server>
    <axis id="1" descriptor="x">
      <BaseSpeed>100</BaseSpeed>
      <SlewSpeed>250</SlewSpeed>

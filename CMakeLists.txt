@@ -7,10 +7,13 @@ find_package( Boost 1.44 COMPONENTS filesystem program_options system)
 #include_directories("${CMAKE_INSTALL_PREFIX}/include")
 #link_directories("${CMAKE_INSTALL_PREFIX}/lib")
 
-set(CMAKE_CXX_FLAGS "-Wall -std=c++0x -O3")
+set(EXTRA_FLAGS "-DSERIAL_DEBUG")
+
+set(CMAKE_CXX_FLAGS "-Wall -std=c++0x -O3 ${EXTRA_FLAGS}")
 set(CMAKE_CXX_FLAGS_DEBUG "-Wextra")
 
-set(CMAKE_EXE_LINKER_FLAGS " -lctb-0.15 -lpthread -lboost_system -lboost_regex")
+#TODO replace this by something platform independent
+set(CMAKE_EXE_LINKER_FLAGS " -lctb-0.15 -lpthread -lboost_system -lboost_program_options -lboost_regex")
 
 
 add_executable(

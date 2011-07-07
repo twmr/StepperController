@@ -6,7 +6,7 @@ CPP_0x=yes
 
 ifeq ($(MACHINE), firebird)
   CC		= g++
-  CCFLAGS       = -Wall -O3
+  CCFLAGS       = -Wall -O3 -Wextra
   ifeq ($(CPP_0x),yes)
     CCFLAGS     += -std=c++0x -pthread
   endif
