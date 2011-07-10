@@ -5,10 +5,10 @@ Stepper Motor Control
 Overview:
 ---------
 
-This is a client/server software for controlling certain industrial
+This is a FLOSS client/server software for controlling certain industrial
 devices via a serial connection (rs232). At the moment it only
 supports the commands of the PM381 controller from
-[McLennan](http://www.mclennan.co.uk/) used for controlling 3
+[McLennan](http://www.mclennan.co.uk/) used for controlling 5
 servo/stepper motors at the Applied Physics Institute (TU Vienna).
 
 The software is written in C++, is platform independent and uses the
@@ -17,8 +17,8 @@ the rs232 interface the C++ ctb library is used access the serial port
 (this library currently only supports Windows and Linux).
 
 The GUI (acting as the network client) uses the platform independent
-[wxWidgets](http://www.wxwidgets.org) Toolkit, but without the boost
-library and the ctb lib.
+[wxWidgets](http://www.wxwidgets.org) Toolkit, but does not depend on
+Boost and on libctb.
 
 Installation:
 -------------
@@ -37,31 +37,47 @@ Download libctb from
 https://iftools.com/download/ctb/0.16/libctb-0.16.tar.gz and install
 it according to the Readme file!
 
-to compile the core program edit the Makefile if necessary and type
-(in the project root directory)
+MOVES:
+---------
+
+to compile the core program for MOVES create a build directory
+
+    mkdir build && cd build
+
+then start cmake
+
+    cmake -DCMAKE_BUILD_TYPE=Debug ..
+
+and finally type
 
     make
 
-the "rsconf" file in the root directory of this project contains the
-serial parameters which are parsed by the server program *IAP_server*,
-and axis.cfg contains all the parameters for each axis. To run the
-server (the port used for the TCP connection is hardcoded to 15000
-atm) type
+the configuration file for the hardware is located in the project root
+directory and it contains the serial parameters which are parsed by
+the server program *moves_server*, it also contains all the parameters
+for each axis. To run the server (the port can be set in the XML file)
+type
 
-    ./IAP_server
+    ./moves_server -f ../parameters.xml
 
-start the cli client with
+start the cli client from another terminal with
 
-    ./IAP_client localhost [batch-file]
+    ./moves_client_cli
 
-The second argument batch-file is optional. If this file is supplied
-then the client sends all commands which are in this file to the
-*IAP_server*. The get a list of available commands start the client
+to see all accepted program options use the -h or --help command line
+option. *moves_client_cli* supports executing batch-files which are
+parsed by the server and then sent to the hardware (Use *-b
+batchfile*). The get a list of available commands start the client
 without a batch-file and type at the prompt (*#>*) *help*.
 
- if you prefer the minimalistic GUI client compile it with
+MOVES GUI:
+---------------
 
-    cd wxGUI && make
+In addition to the cli client program a GUI was developed using
+wxWidgets, which supports only a subset of the offerd commands of the
+PM381 controller. To compile it type
+
+    cd src/gui && make
 
 If this does not work (most likely) then you need to regenerate the
 Makefile, do this inside/with DialogBlocks.
