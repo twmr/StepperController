@@ -24,59 +24,88 @@
 #include <cstring>
 #include <string>
 #include <iostream>
+#include <vector>
+
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/program_options.hpp>
+#include <boost/tokenizer.hpp>
+namespace po = boost::program_options;
 
 #include "global.hpp"
 #include "IAP_server.hpp"
 
 
 using boost::asio::ip::tcp;
-
+using namespace std;
 
 int main(int argc, char* argv[])
 {
-    try
-    {
-        if( argc < 2 ){
-            std::cout << "Usage: " << *argv << " server-hostname [batch-file]"
-                      << std::endl;
+
+    string serverhostname("localhost");
+    string serverport("16000"); //string is ok here
+    string batch;
+    bool batch_mode = false;
+    vector<string> batchcmds;
+
+    // Read command line arguments
+    try {
+        po::options_description desc("Allowed options");
+        desc.add_options()
+            ("help,h", "produce help message")
+            ("serverhostname,s", po::value(&serverhostname),
+             "hostname of the server")
+            ("serverport,p", po::value(&serverport),
+             "portname of the server")
+            ("batchfile,b", po::value<string>(),
+             "name of the batchfile to execute on the steppermotor hardware");
+
+        po::variables_map vm;
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+
+        if (vm.count("help")) {
+            cout << desc << "\n";
             return 1;
         }
+        if (vm.count("batchfile")) {
+            //load file
+            ifstream ifs(vm["batchfile"].as<string>().c_str());
+            if (!ifs) {
+                cout << "Could not open the batch file\n";
+                return 1;
+            }
+            // Read the whole file into a string
+            stringstream ss;
+            ss << ifs.rdbuf();
+            // Split the file content
+            boost::char_separator<char> sep("\n\r");
+            string batchfilecontents( ss.str() );
+            boost::tokenizer<boost::char_separator<char> > tok(batchfilecontents, sep);
+            copy(tok.begin(), tok.end(), back_inserter(batchcmds));
+            batch_mode = true;
+        }
+    }
+    catch(exception& e) {
+        cerr << "error: " << e.what() << "\n";
+        return 1;
+    }
 
-        std::string serverhost = argv[1];
-        std::string cmd;
-        std::ifstream f;
 
-        bool batch_mode = false;
+    //TODO readd single cmd mode!
+
+    try
+    {
+        string cmd;
+
         bool send_single_cmd = false;
         msg_t request, reply;
-
-        if(argc==3) {
-
-            f.open(argv[2], std::ifstream::in);
-            f.close();
-            if(f.fail()) {
-                send_single_cmd = true;
-            }
-            else {
-                f.clear(std::ios::failbit);
-                f.open(argv[2], std::ifstream::in);
-
-                //do we still need to check if opening file succeeded?
-                if(f.is_open() != true) {
-                    std::cerr << "couldn't open " <<argv[2] << std::endl;
-                    return 1;
-                }
-                batch_mode = true;
-            }
-        }
 
         boost::asio::io_service io_service;
 
         tcp::resolver resolver(io_service);
-        tcp::resolver::query query(tcp::v4(), serverhost, "15000");
+        tcp::resolver::query query(tcp::v4(), serverhostname, serverport);
         tcp::resolver::iterator iterator = resolver.resolve(query);
 
         tcp::socket s(io_service);
@@ -87,21 +116,23 @@ int main(int argc, char* argv[])
             request.type = MSG_REQUEST;
             boost::asio::write(s, boost::asio::buffer(reinterpret_cast<char*>(&request), msglen));
             boost::asio::read(s, boost::asio::buffer(reinterpret_cast<char*>(&reply), msglen));
-            std::cout << reply.msg << std::endl;
+            cout << reply.msg << endl;
             return 0;
         }
 
         while(true) {
-            std::cout << "#> ";
+            cout << "#> ";
 
             if(batch_mode) {
-                getline(f,cmd);
-                if(f.eof()) break;
-                std::cout << cmd << std::endl;
+                if(!batchcmds.size())
+                    break;
+                cmd = batchcmds.front();
+                batchcmds.erase(batchcmds.begin());
+                cout << cmd << endl;
             } else
             {
                 // interactive mode
-                std::cin.getline(request.msg, MSGSIZE);
+                cin.getline(request.msg, MSGSIZE);
                 cmd=request.msg;
 
                 if(!cmd.compare("quit") || !cmd.compare("q")) {
@@ -117,13 +148,13 @@ int main(int argc, char* argv[])
             try {
                 if (boost::starts_with(cmd, "sleep ")) {
                     int sleep_value = boost::lexical_cast<int>(cmd.substr(6));
-                    std::cout << "sleeping for " << sleep_value << " seconds" << std::endl;
+                    cout << "sleeping for " << sleep_value << " seconds" << endl;
                     sleep(sleep_value);
                     continue;
                 }
-            } catch (std::bad_cast) {
+            } catch (bad_cast) {
                 // bad parameter
-                std::cerr << "bad sleep parameter" << std::endl;
+                cerr << "bad sleep parameter" << endl;
             }
 
             if(batch_mode)
@@ -134,14 +165,11 @@ int main(int argc, char* argv[])
             boost::asio::write(s, boost::asio::buffer(reinterpret_cast<char*>(&request), msglen));
             boost::asio::read(s, boost::asio::buffer(reinterpret_cast<char*>(&reply), msglen));
 
-            std::cout << reply.msg << std::endl;
+            cout << reply.msg << endl;
         }
 
-        f.close();
-    }
-    catch (std::exception& e)
-    {
-        std::cerr << "Exception: " << e.what() << std::endl;
+    } catch (exception& e) {
+        cerr << "Exception: " << e.what() << endl;
     }
 
     return 0;

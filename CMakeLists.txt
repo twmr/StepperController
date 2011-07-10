@@ -1,23 +1,33 @@
 cmake_minimum_required(VERSION 2.8)
 project(stepper-control CXX)
 
+set( CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules )
+
+
+
 find_package( Boost 1.44 COMPONENTS filesystem program_options system)
+include_directories ( ${Boost_INCLUDE_DIRS} )
+link_directories ( ${Boost_LIBRARY_DIRS} )
+
+find_package( CTB REQUIRED)
+include_directories( ${CTB_INCLUDE_DIRS} )
+message( STATUS "CTB_INCLUDE_DIRS = ${CTB_INCLUDE_DIRS}" )
+message( STATUS "CTB_LIBRARY = ${CTB_LIBRARY}" )
+
 
 #message(STATUS "Adding include directory ${CMAKE_INSTALL_PREFIX}/include")
 #include_directories("${CMAKE_INSTALL_PREFIX}/include")
 #link_directories("${CMAKE_INSTALL_PREFIX}/lib")
 
-set(EXTRA_FLAGS "-DSERIAL_DEBUG")
+add_definitions(-DSERIAL_DEBUG)
 
-set(CMAKE_CXX_FLAGS "-Wall -std=c++0x -O3 ${EXTRA_FLAGS}")
+set(CMAKE_CXX_FLAGS "-Wall -std=c++0x -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-Wextra")
 
-#TODO replace this by something platform independent
-set(CMAKE_EXE_LINKER_FLAGS " -lctb-0.15 -lpthread -lboost_system -lboost_program_options -lboost_regex")
-
+include_directories(include)
 
 add_executable(
-	IAP_server
+	moves_server
 		rs232.cpp
 		ctb.cpp
 		helper.cpp
@@ -25,10 +35,10 @@ add_executable(
 		IAPBoard.cpp
 		IAP_server.cpp
 )
+target_link_libraries(moves_server ${CTB_LIBRARY} boost_system boost_regex boost_program_options)
+
 add_executable(
-	IAP_client_cli
+	moves_client_cli
 		IAP_client_cli.cpp
 )
-include_directories(include)
-include_directories ( ${Boost_INCLUDE_DIRS} )
-link_directories ( ${Boost_LIBRARY_DIRS} )
+target_link_libraries(moves_client_cli ${CTB_LIBRARY} boost_system boost_program_options)
