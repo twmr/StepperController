@@ -19,26 +19,7 @@ message( STATUS "CTB_LIBRARY = ${CTB_LIBRARY}" )
 #include_directories("${CMAKE_INSTALL_PREFIX}/include")
 #link_directories("${CMAKE_INSTALL_PREFIX}/lib")
 
-add_definitions(-DSERIAL_DEBUG)
-
-set(CMAKE_CXX_FLAGS "-Wall -std=c++0x -O3")
-set(CMAKE_CXX_FLAGS_DEBUG "-Wextra")
 
 include_directories(include)
 
-add_executable(
-	moves_server
-		rs232.cpp
-		ctb.cpp
-		helper.cpp
-		IAPconfig.cpp
-		IAPBoard.cpp
-		IAP_server.cpp
-)
-target_link_libraries(moves_server ${CTB_LIBRARY} boost_system boost_regex boost_program_options)
-
-add_executable(
-	moves_client_cli
-		IAP_client_cli.cpp
-)
-target_link_libraries(moves_client_cli ${CTB_LIBRARY} boost_system boost_program_options)
+add_subdirectory(src/core)

@@ -70,6 +70,11 @@ parsed by the server and then sent to the hardware (Use *-b
 batchfile*). The get a list of available commands start the client
 without a batch-file and type at the prompt (*#>*) *help*.
 
+Look at example.bat for a simple batch file.
+Execute it with
+
+    ./moves_client_cli -b ../example.bat
+
 MOVES GUI:
 ---------------
 
