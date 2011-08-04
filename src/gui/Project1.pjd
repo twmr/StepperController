@@ -23,7 +23,7 @@
     <bool name="generate_for_xrced">0</bool>
     <bool name="generate_virtual_eventhandlers">0</bool>
     <string name="current_platform">"__WXGTK__"</string>
-    <string name="target_wx_version">"2.9.1"</string>
+    <string name="target_wx_version">"2.9.2"</string>
     <string name="app_kind">"Standard"</string>
     <string name="cpp_header_comment">"/////////////////////////////////////////////////////////////////////////////
 // Name:        %HEADER-FILENAME%
@@ -132,7 +132,7 @@
         <long name="locked">0</long>
         <string name="template-name">""</string>
         <bool name="dirty">1</bool>
-        <long name="makefile-last-written">-8519680</long>
+        <long name="makefile-last-written">4286447616</long>
         <string name="Compiler name">""</string>
         <string name="Build mode">"Debug"</string>
         <string name="Unicode mode">"Unicode"</string>
@@ -201,7 +201,7 @@
           <long name="locked">0</long>
           <string name="template-name">"GCC"</string>
           <bool name="dirty">0</bool>
-          <long name="makefile-last-written">-8519680</long>
+          <long name="makefile-last-written">4286447616</long>
           <string name="Compiler name">"GCC"</string>
           <string name="Build mode">"Release"</string>
           <string name="Unicode mode">"Unicode"</string>
@@ -256,7 +256,7 @@
           <string name="Libraries">"%AUTO%"</string>
           <string name="Library path">"%AUTO%"</string>
           <string name="Linker flags">"-lpangocairo-1.0 -lcairo -lX11"</string>
-          <string name="Include path">"%AUTO%"</string>
+          <string name="Include path">"$(shell $(WXWIN)/GCCBuildReleaseGTK2Unicode/wx-config --inplace --cxxflags)  -I../../include"</string>
           <string name="Resource flags">"%AUTO%"</string>
           <string name="Resource path">"%AUTO%"</string>
           <bool name="Suppress source rules">0</bool>
@@ -393,7 +393,7 @@
           <long name="proxy-X">-1</long>
           <long name="proxy-Y">-1</long>
           <long name="proxy-Width">400</long>
-          <long name="proxy-Height">300</long>
+          <long name="proxy-Height">500</long>
           <bool name="proxy-AUI manager">0</bool>
           <string name="proxy-Event sources">""</string>
           <document>
@@ -503,7 +503,7 @@
             <string name="proxy-Orientation">"Vertical"</string>
             <string name="proxy-Member variable name">"mainswitcher"</string>
             <bool name="proxy-wxSHAPED">0</bool>
-            <bool name="proxy-wxADJUST_MINSIZE">0</bool>
+            <bool name="proxy-wxADJUST_MINSIZE">1</bool>
             <bool name="proxy-wxFIXED_MINSIZE">0</bool>
             <string name="proxy-Platform">"&lt;Any platform&gt;"</string>
             <document>
@@ -543,7 +543,7 @@
                 <string name="proxy-Orientation">"Vertical"</string>
                 <string name="proxy-Member variable name">""</string>
                 <string name="proxy-AlignH">"Centre"</string>
-                <string name="proxy-AlignV">"Expand"</string>
+                <string name="proxy-AlignV">"Top"</string>
                 <long name="proxy-Stretch factor">1</long>
                 <long name="proxy-Border">5</long>
                 <bool name="proxy-wxLEFT">1</bool>
@@ -573,6 +573,7 @@
                   <string name="proxy-Font">""</string>
                   <bool name="proxy-Hidden">0</bool>
                   <bool name="proxy-Enabled">1</bool>
+                  <string name="proxy-Parenting">"Use wxWidgets version"</string>
                   <string name="proxy-Static box class">"wxStaticBox"</string>
                   <string name="proxy-Orientation">"Vertical"</string>
                   <string name="proxy-AlignH">"Centre"</string>

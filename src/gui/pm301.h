@@ -27,8 +27,9 @@
 #include "wx/socket.h"
 #include "wx/thread.h"
 #include "wx/textfile.h"
-#include "../include/global.hpp"
-#include "../include/position.hpp"
+
+#include "global.hpp"
+#include "position.hpp"
 
 
 /*!
@@ -70,7 +71,7 @@ class PositionUpdateThread;
 #define SYMBOL_PM301_STYLE wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxCLOSE_BOX
 #define SYMBOL_PM301_TITLE _("MOVES - Stepper Motor Controller (PM381)")
 #define SYMBOL_PM301_IDNAME ID_PM301
-#define SYMBOL_PM301_SIZE wxSize(400, 300)
+#define SYMBOL_PM301_SIZE wxSize(400, 500)
 #define SYMBOL_PM301_POSITION wxDefaultPosition
 ////@end control identifiers
 #define SOCKET_ID 9980

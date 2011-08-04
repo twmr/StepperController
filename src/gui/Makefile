@@ -10,7 +10,7 @@ CONFIG=release
 
 # release
 ifeq ($(CONFIG),release)
-WXWIN=/home/thomas/packages/wxWidgets-2.9.1
+WXWIN=/home/thomas/local/src/wxWidgets-2.9.2
 TOOLCHAINNAME=gtk2u
 WXVERSION:=$(shell echo `$(WXWIN)/GCCBuildReleaseGTK2Unicode/wx-config --version`)
 CXX=g++
@@ -30,7 +30,7 @@ WARNINGFLAGS=-Wall -Wno-write-strings
 OPTFLAGS=-O2
 DEBUGFLAGS=
 LIBPATH=
-CPPINC:=$(shell $(WXWIN)/GCCBuildReleaseGTK2Unicode/wx-config --inplace --cxxflags)
+CPPINC:=$(shell $(WXWIN)/GCCBuildReleaseGTK2Unicode/wx-config --inplace --cxxflags)  -I../../include
 GCCFLAGS=
 LDFLAGS=$(LIBS) $(LIBPATH) $(LINKERFLAGS)
 CPPFLAGS=$(CPPINC) $(GCCFLAGS) $(DEBUGFLAGS) $(OPTFLAGS) $(WARNINGFLAGS)
@@ -77,13 +77,13 @@ $(OUTPUTPATH)/$(PROGRAM).app/Contents/PkgInfo: $(OUTPUTPATH)/$(PROGRAM) $(INFOPL
 	ln -f $(OUTPUTPATH)/$(PROGRAM) $(OUTPUTPATH)/$(PROGRAM).app/Contents/MacOS/$(PROGRAM)
 	cp -f $(ICNSSOURCE) $(ICNSDEST)
 
-$(OBJECTPATH)/iap_gui_app.o:	iap_gui_app.cpp iap_gui_app.hpp pm301.h ../include/global.hpp ../include/position.hpp
+$(OBJECTPATH)/iap_gui_app.o:	iap_gui_app.cpp iap_gui_app.hpp pm301.h
 	$(CXX) -c -o $@ $(CPPFLAGS) iap_gui_app.cpp
 
-$(OBJECTPATH)/pm301.o:	pm301.cpp pm301.h ../include/global.hpp ../include/position.hpp unitconversionconstants.h
+$(OBJECTPATH)/pm301.o:	pm301.cpp pm301.h unitconversionconstants.h
 	$(CXX) -c -o $@ $(CPPFLAGS) pm301.cpp
 
-$(OBJECTPATH)/unitconversionconstants.o:	unitconversionconstants.cpp unitconversionconstants.h pm301.h ../include/global.hpp ../include/position.hpp
+$(OBJECTPATH)/unitconversionconstants.o:	unitconversionconstants.cpp unitconversionconstants.h pm301.h
 	$(CXX) -c -o $@ $(CPPFLAGS) unitconversionconstants.cpp
 
 .PHONY:	all clean
