@@ -10,7 +10,7 @@ CONFIG=release
 
 # release
 ifeq ($(CONFIG),release)
-WXWIN=/home/thomas/local/src/wxWidgets-2.9.2
+WXWIN=/home/thomas/packages/wxWidgets-2.9.1
 TOOLCHAINNAME=gtk2u
 WXVERSION:=$(shell echo `$(WXWIN)/GCCBuildReleaseGTK2Unicode/wx-config --version`)
 CXX=g++
@@ -39,7 +39,7 @@ RESPATH=--include-dir "$(WXWIN)/include" --include-dir "$(WXWIN)/contrib/include
 MACPACKAGEINFO=
 endif
 
-OBJECTS=$(OBJECTPATH)/iap_gui_app.o $(OBJECTPATH)/pm301.o $(OBJECTPATH)/unitconversionconstants.o $(RESOURCEOBJECT)
+OBJECTS=$(OBJECTPATH)/iap_gui_app.o $(OBJECTPATH)/pm301.o $(RESOURCEOBJECT)
 
 all:	$(BUILDPATHS) $(MACPACKAGEINFO) $(OUTPUTPATH)/$(PROGRAM)
 
@@ -82,9 +82,6 @@ $(OBJECTPATH)/iap_gui_app.o:	iap_gui_app.cpp iap_gui_app.hpp pm301.h
 
 $(OBJECTPATH)/pm301.o:	pm301.cpp pm301.h unitconversionconstants.h
 	$(CXX) -c -o $@ $(CPPFLAGS) pm301.cpp
-
-$(OBJECTPATH)/unitconversionconstants.o:	unitconversionconstants.cpp unitconversionconstants.h pm301.h
-	$(CXX) -c -o $@ $(CPPFLAGS) unitconversionconstants.cpp
 
 .PHONY:	all clean
 ### End DialogBlocks generated body
