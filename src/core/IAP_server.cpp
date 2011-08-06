@@ -136,6 +136,17 @@ namespace IAPServer
             board->get_cur_position(p);
             p.GetPositionString(message.msg);
         }
+        else if (! data.compare("ga")) {
+            map<size_t,string>& id_string_map = board->get_coord_map();
+            ostringstream os;
+
+            for(map<size_t, string>::const_iterator it = id_string_map.begin();
+                        it != id_string_map.end(); ++it){
+                os << it->first << ":" << it->second << std::endl;
+            }
+            prepare_tcp_message(os.str());
+        }
+
         else {
             /* all other commads */
 

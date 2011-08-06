@@ -19,7 +19,7 @@ message( STATUS "CTB_LIBRARY = ${CTB_LIBRARY}" )
 #include_directories("${CMAKE_INSTALL_PREFIX}/include")
 #link_directories("${CMAKE_INSTALL_PREFIX}/lib")
 
-find_package(wxWidgets COMPONENTS core base net)
+find_package(wxWidgets 2.9.2 COMPONENTS core base net)
 IF(wxWidgets_FOUND)
 
  if(wxWidgets_DEFINITIONS)

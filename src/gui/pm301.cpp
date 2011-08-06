@@ -34,7 +34,8 @@
 ////@begin XPM images
 ////@end XPM images
 
-#undef TEST_NETWORK
+//#undef TEST_NETWORK
+#define TEST_NETWORK
 
 /*
  * PM301 type definition
@@ -133,7 +134,7 @@ void PM301::Init()
     std::cout << "connecting to localhost" << std::endl;
     wxIPV4address addr;
     addr.Hostname(wxT("localhost"));
-    addr.Service(15000);
+    addr.Service(16000);
 
     s = new wxSocketClient();
 
@@ -407,7 +408,7 @@ void PM301::initaxes()
 #else
     wxString text;
 
-    text.Printf("x\ny\nz\n\u0398\nk\nl\n");
+    text.Printf("1:x\n2:y\n3:z\n4:\u0398\n5:k\n6:l\n");
 #endif
     std::cout << "Command \"ga\" returned: " << text.c_str() << std::endl;
     wxVector<Position::type> vec;
@@ -415,8 +416,13 @@ void PM301::initaxes()
     while ( tkz.HasMoreTokens() )
     {
         wxString curcoord = tkz.GetNextToken();
-        //std::cout << v << std::endl;
-        coords.push_back(new wxString(curcoord));
+        unsigned long id;
+
+        curcoord.BeforeFirst(':').ToULong(&id);
+        wxString coordname = curcoord.AfterFirst(':');
+        std::cout << "GUI registering axis with id " << id << " and coordname " << coordname
+                  << std::endl;
+        coords.push_back(new wxString(coordname));
     }
 
     nraxes = coords.size();
