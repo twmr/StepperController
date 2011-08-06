@@ -23,12 +23,11 @@
 ////@begin includes
 ////@end includes
 
-
 #include <vector>
+#include "wx/vector.h"
 #include "wx/tokenzr.h"
 #include "wx/socket.h"
 #include "pm301.h"
-#include "unitconversionconstants.h"
 
 //#include "sample.xpm"
 
@@ -57,25 +56,14 @@ BEGIN_EVENT_TABLE( PM301, wxFrame )
 
     EVT_MENU( ID_MENUITEM2, PM301::OnPositionUpdateClick )
 
-    EVT_BUTTON( ID_BITMAPBUTTON, PM301::OnBitmapbuttonClick )
-
-    EVT_BUTTON( ID_BITMAPBUTTON1, PM301::OnBitmapbutton1Click )
-
-    EVT_BUTTON( ID_BITMAPBUTTON2, PM301::OnBitmapbutton2Click )
-
     EVT_BUTTON( ID_BUTTON3, PM301::OnButtonZeroPositionClick )
 
     EVT_CHECKBOX( ID_CHECKBOX, PM301::OnCheckboxClick )
-
-    EVT_RADIOBOX( ID_RADIOBOX, PM301::OnRadioboxSelected )
 
     EVT_UPDATE_UI( ID_STATUSBAR, PM301::OnStatusbarUpdate )
 
 ////@end PM301 event table entries
 
-    EVT_SPINCTRLDOUBLE( ID_SPINCTRL, PM301::OnSpinctrlUpdated )
-    EVT_SPINCTRLDOUBLE( ID_SPINCTRL1, PM301::OnSpinctrl1Updated )
-    EVT_SPINCTRLDOUBLE( ID_SPINCTRL2, PM301::OnSpinctrl2Updated )
     EVT_SOCKET(SOCKET_ID, PM301::OnSocketEvent )
 
 END_EVENT_TABLE()
@@ -133,15 +121,8 @@ void PM301::Init()
 ////@begin PM301 member initialisation
     mainswitcher = NULL;
     basiccontrol = NULL;
-    xlabel = NULL;
-    xSpinCtrl = NULL;
-    ylabel = NULL;
-    ySpinCtrl = NULL;
-    tlabel = NULL;
-    tSpinCtrl = NULL;
     jogmodelayout = NULL;
     checkjog = NULL;
-    axradiobox = NULL;
     batchmodelog = NULL;
     batchmodetextctl = NULL;
     statusbar = NULL;
@@ -211,7 +192,7 @@ void PM301::CreateControls()
     itemFrame1->SetSizer(mainswitcher);
 
     basiccontrol = new wxBoxSizer(wxHORIZONTAL);
-    mainswitcher->Add(basiccontrol, 1, wxGROW|wxALL, 5);
+    mainswitcher->Add(basiccontrol, 0, wxGROW, 5);
 
     wxBoxSizer* itemBoxSizer9 = new wxBoxSizer(wxVERTICAL);
     basiccontrol->Add(itemBoxSizer9, 1, wxALIGN_TOP|wxALL, 5);
@@ -220,77 +201,32 @@ void PM301::CreateControls()
     wxStaticBoxSizer* itemStaticBoxSizer10 = new wxStaticBoxSizer(itemStaticBoxSizer10Static, wxVERTICAL);
     itemBoxSizer9->Add(itemStaticBoxSizer10, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
 
-    wxBoxSizer* itemBoxSizer11 = new wxBoxSizer(wxHORIZONTAL);
-    itemStaticBoxSizer10->Add(itemBoxSizer11, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
+    wxButton* itemButton11 = new wxButton( itemFrame1, ID_BUTTON3, _("Set current position as zero position"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemBoxSizer9->Add(itemButton11, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
 
-    xlabel = new wxStaticText( itemFrame1, wxID_STATIC, _("x:"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer11->Add(xlabel, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    xSpinCtrl = new wxSpinCtrlDouble( itemFrame1, ID_SPINCTRL, _T("0"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -5000, 5000, 0 );
-    itemBoxSizer11->Add(xSpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    wxBitmapButton* itemBitmapButton14 = new wxBitmapButton( itemFrame1, ID_BITMAPBUTTON, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW );
-    itemBoxSizer11->Add(itemBitmapButton14, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    wxBoxSizer* itemBoxSizer15 = new wxBoxSizer(wxHORIZONTAL);
-    itemStaticBoxSizer10->Add(itemBoxSizer15, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
-
-    ylabel = new wxStaticText( itemFrame1, wxID_STATIC, _("y:"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer15->Add(ylabel, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    ySpinCtrl = new wxSpinCtrlDouble( itemFrame1, ID_SPINCTRL1, _T("0"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -5000, 5000, 0 );
-    itemBoxSizer15->Add(ySpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    wxBitmapButton* itemBitmapButton18 = new wxBitmapButton( itemFrame1, ID_BITMAPBUTTON1, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW );
-    itemBoxSizer15->Add(itemBitmapButton18, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    wxBoxSizer* itemBoxSizer19 = new wxBoxSizer(wxHORIZONTAL);
-    itemStaticBoxSizer10->Add(itemBoxSizer19, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
-
-    tlabel = new wxStaticText( itemFrame1, wxID_STATIC, _("t:"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer19->Add(tlabel, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    tSpinCtrl = new wxSpinCtrlDouble( itemFrame1, ID_SPINCTRL2, _T("0"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -5000, 5000, 0 );
-    itemBoxSizer19->Add(tSpinCtrl, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    wxBitmapButton* itemBitmapButton22 = new wxBitmapButton( itemFrame1, ID_BITMAPBUTTON2, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW );
-    itemBoxSizer19->Add(itemBitmapButton22, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    wxButton* itemButton23 = new wxButton( itemFrame1, ID_BUTTON3, _("Set current position as zero position"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer9->Add(itemButton23, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
-
-    wxStaticLine* itemStaticLine24 = new wxStaticLine( itemFrame1, wxID_STATIC, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL );
-    basiccontrol->Add(itemStaticLine24, 0, wxGROW, 5);
+    wxStaticLine* itemStaticLine12 = new wxStaticLine( itemFrame1, wxID_STATIC, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL );
+    basiccontrol->Add(itemStaticLine12, 0, wxGROW, 5);
 
     jogmodelayout = new wxBoxSizer(wxVERTICAL);
-    basiccontrol->Add(jogmodelayout, 0, wxGROW|wxRIGHT|wxTOP|wxBOTTOM, 5);
+    basiccontrol->Add(jogmodelayout, 0, wxGROW|wxALL, 5);
 
     checkjog = new wxCheckBox( itemFrame1, ID_CHECKBOX, _("Jog Mode"), wxDefaultPosition, wxDefaultSize, 0 );
     checkjog->SetValue(false);
-    jogmodelayout->Add(checkjog, 0, wxALIGN_LEFT, 5);
-
-    wxArrayString axradioboxStrings;
-    axradioboxStrings.Add(_("&Axis 1"));
-    axradioboxStrings.Add(_("&Axis 2"));
-    axradioboxStrings.Add(_("&Axis 3"));
-    axradiobox = new wxRadioBox( itemFrame1, ID_RADIOBOX, _("Axes"), wxDefaultPosition, wxDefaultSize, axradioboxStrings, 1, wxRA_SPECIFY_COLS );
-    axradiobox->SetSelection(0);
-    axradiobox->Show(false);
-    jogmodelayout->Add(axradiobox, 0, wxGROW, 5);
+    jogmodelayout->Add(checkjog, 0, wxGROW, 5);
 
     batchmodelog = new wxBoxSizer(wxVERTICAL);
     mainswitcher->Add(batchmodelog, 1, wxGROW|wxALL, 5);
 
-    wxBoxSizer* itemBoxSizer29 = new wxBoxSizer(wxHORIZONTAL);
-    batchmodelog->Add(itemBoxSizer29, 0, wxGROW|wxALL, 0);
+    wxBoxSizer* itemBoxSizer16 = new wxBoxSizer(wxHORIZONTAL);
+    batchmodelog->Add(itemBoxSizer16, 0, wxGROW|wxALL, 0);
 
-    itemBoxSizer29->Add(5, 5, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    itemBoxSizer16->Add(5, 5, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxButton* itemButton31 = new wxButton( itemFrame1, ID_BUTTON, _("Load Bach File"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer29->Add(itemButton31, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    wxButton* itemButton18 = new wxButton( itemFrame1, ID_BUTTON, _("Load Bach File"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemBoxSizer16->Add(itemButton18, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxButton* itemButton32 = new wxButton( itemFrame1, ID_BUTTON1, _("Quit Batch Mode"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer29->Add(itemButton32, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    wxButton* itemButton19 = new wxButton( itemFrame1, ID_BUTTON1, _("Quit Batch Mode"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemBoxSizer16->Add(itemButton19, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
     batchmodetextctl = new wxTextCtrl( itemFrame1, ID_TEXTCTRL6, _("Batch Log"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE );
     batchmodelog->Add(batchmodetextctl, 1, wxGROW|wxALL, 5);
@@ -299,57 +235,59 @@ void PM301::CreateControls()
     statusbar->SetFieldsCount(1);
     itemFrame1->SetStatusBar(statusbar);
 
-    wxToolBar* itemToolBar35 = CreateToolBar( wxTB_FLAT|wxTB_HORIZONTAL, ID_TOOLBAR );
-    itemToolBar35->Show(false);
-    wxButton* itemButton36 = new wxButton( itemToolBar35, ID_BUTTON2, _("Button"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemToolBar35->AddControl(itemButton36);
-    itemToolBar35->Realize();
-    itemFrame1->SetToolBar(itemToolBar35);
+    wxToolBar* itemToolBar22 = CreateToolBar( wxTB_FLAT|wxTB_HORIZONTAL, ID_TOOLBAR );
+    itemToolBar22->Show(false);
+    wxButton* itemButton23 = new wxButton( itemToolBar22, ID_BUTTON2, _("Button"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemToolBar22->AddControl(itemButton23);
+    itemToolBar22->Realize();
+    itemFrame1->SetToolBar(itemToolBar22);
 
     // Connect events and objects
-    itemButton31->Connect(ID_BUTTON, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LoadBatchFileDialog), NULL, this);
-    itemButton32->Connect(ID_BUTTON1, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LeaveBatchModeButtonPressed), NULL, this);
+    itemButton18->Connect(ID_BUTTON, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LoadBatchFileDialog), NULL, this);
+    itemButton19->Connect(ID_BUTTON1, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LeaveBatchModeButtonPressed), NULL, this);
 ////@end PM301 content construction
 //std::locale::global(locale(setlocale(LC_ALL, NULL)));
 // m_locale.Init(wxLANGUAGE_DEFAULT, wxLOCALE_LOAD_DEFAULT | wxLOCALE_CONV_ENCODING);
 
-    // wxBoxSizer* axe4itemBoxSizer = new wxBoxSizer(wxHORIZONTAL);
-    // itemStaticBoxSizer10->Add(axe4itemBoxSizer, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
-
-    // wxStaticText* axe4label = new wxStaticText( itemStaticBoxSizer10->GetStaticBox(), wxID_STATIC, _("y:"), wxDefaultPosition, wxDefaultSize, 0 );
-    // axe4itemBoxSizer->Add(axe4label, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    // wxSpinCtrlDouble* axe4SpinCtrl = new wxSpinCtrlDouble( itemStaticBoxSizer10->GetStaticBox(), ID_SPINCTRL1, _T("0"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -5000, 5000, 0 );
-    // axe4itemBoxSizer->Add(axe4SpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    // wxBitmapButton* axe4BitmapButton = new wxBitmapButton( itemStaticBoxSizer10->GetStaticBox(), ID_BITMAPBUTTON1, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW );
-    // axe4itemBoxSizer->Add(axe4BitmapButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-
-    //SendMessage("gp1");
-    //FIXME unit conversion
-    //new_x_pos->SetValue(wxString::Format(wxT("%f"), atof(reply.msg));
-    batchmodelog->Show(false);
-    mainswitcher->Layout();
+    //retreive nr. of axes and coordinate names from the server
+    initaxes();
 
     const Position initpos = getcurpos();
     set_cp(initpos);
-    
-    xlabel->SetLabel(wxT("x [\u03BCm]:"));
-    ylabel->SetLabel(wxT("y [\u03BCm]:"));
-    tlabel->SetLabel(wxT("\u0398 [\u03BCm]:"));
-    // axe4label->SetLabel(wxT("lala"));
-    
-    xSpinCtrl->SetValue(initpos.GetCoordinate(1));
-    ySpinCtrl->SetValue(initpos.GetCoordinate(2));
-    tSpinCtrl->SetValue(initpos.GetCoordinate(3));
-    xSpinCtrl->SetDigits(2);
-    ySpinCtrl->SetDigits(2);
-    tSpinCtrl->SetDigits(2);
-    
-    //wxString text;
-    //text.Printf(wxT("Position: x: %.2f,  y: %.2f,  \u0398: %.2f"),
-    //           initpos.GetCoordinate(1), initpos.GetCoordinate(2), initpos.GetCoordinate(3));
-    //statusbar->SetStatusText(text, 0);
+    wxArrayString axesradioboxStrings;
+
+    for(size_t i=0; i < get_nraxes(); ++i) {
+        axisbs.push_back(new wxBoxSizer(wxHORIZONTAL));
+        axisst.push_back(new wxStaticText(itemStaticBoxSizer10->GetStaticBox(), -1,
+                                          wxString::Format("%s [\u03BCm]:", *coords[i]),
+                                          wxDefaultPosition, wxDefaultSize, 0));
+        axissc.push_back(new wxSpinCtrlDouble(itemStaticBoxSizer10->GetStaticBox(), ID_SPINCTRLS+i, _T("0"),
+                                              wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -5000, 5000, 0));
+        axisbb.push_back(new wxBitmapButton(itemStaticBoxSizer10->GetStaticBox(), ID_BITMAPBUTTONS+i,
+                                            wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW));
+
+        axissc[i]->SetValue(initpos.GetCoordinate(i+1));
+        axissc[i]->SetDigits(2);
+
+        axisbs[i]->Add(axisst[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+        axisbs[i]->Add(axissc[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+        axisbs[i]->Add(axisbb[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+        itemStaticBoxSizer10->Add(axisbs[i], 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
+
+        axissc[i]->Bind(wxEVT_COMMAND_SPINCTRLDOUBLE_UPDATED, &PM301::OnSpinCTRLUpdated, this);
+        axisbb[i]->Bind(wxEVT_COMMAND_BUTTON_CLICKED, &PM301::OnBitmapbuttonClick, this);
+
+        axesradioboxStrings.Add(wxString::Format("&%s",*coords[i]));
+    }
+
+    axesradiobox = new wxRadioBox( itemFrame1, ID_AXESRADIOBOX, _("Axis"), wxDefaultPosition,
+                                   wxDefaultSize, axesradioboxStrings, 1, wxRA_SPECIFY_COLS );
+    axesradiobox->SetSelection(0);
+    axesradiobox->Show(false);
+    jogmodelayout->Add(axesradiobox, 0, wxGROW, 5);
+
+    batchmodelog->Show(false);
+    mainswitcher->Layout();
 }
 
 /*
@@ -418,45 +356,24 @@ void PM301::SendMessage(const char *msgstr)
 
 
 /*
- * wxEVT_COMMAND_RADIOBOX_SELECTED event handler for ID_RADIOBOX
+ * wxEVT_COMMAND_RADIOBOX_SELECTED event handler for ID_AXESRADIOBOX
  */
 
 void PM301::OnRadioboxSelected( wxCommandEvent& event )
 {
     char buf[4];
-    int selected = axradiobox->GetSelection();
+    int selected = axesradiobox->GetSelection();
     sprintf(buf,"sa%d",selected);
     SendMessage(buf);
 }
 
 
-
-int PM301::getIdxFromCoord(const wxString &coord)
+void PM301::check_and_update_position(wxSpinCtrlDouble* ctrl, const size_t idx, const double curval)
 {
-    if(coord == wxT("x"))
-        return 0;
-    else if(coord == wxT("y"))
-        return 1;
-    else if(coord == wxT("phi"))
-        return 2;
-    else
-        return -1;
-}
-
-
-void PM301::check_and_update_position(wxSpinCtrlDouble* ctrl, const wxString& coord, const double curval)
-{
-    int idx = getIdxFromCoord(coord);
-
-    if(idx < 0) {
-        wxLogError(wxT("yes"));
-        return;
-    }
-
     wxString text;
-    text.Printf(wxT("sa%d"),idx);
+    text.Printf(wxT("sa%u"),idx);
     SendMessage(text);
-    text.Printf(wxT("1MA%d"), (int)curval);
+    text.Printf(wxT("1MA%d"), (int)round(curval));
     SendMessage(text);
 }
 
@@ -469,16 +386,40 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
 {
     if(checkjog->IsChecked()) {
         SendMessage("1AR");
-        axradiobox->Show(true);
+        axesradiobox->Show(true);
         SendMessage("sa0");
 
     } else
     {
         SendMessage("1IR");
-        axradiobox->Show(false);
+        axesradiobox->Show(false);
     }
 
     jogmodelayout->Layout();
+}
+
+void PM301::initaxes()
+{
+    SendMessage("ga"); //get axes
+#ifdef TEST_NETWORK
+    s->Read(reinterpret_cast<char*>(&reply), msglen);
+    wxString text(reply.msg,wxConvUTF8);
+#else
+    wxString text;
+
+    text.Printf("x\ny\nz\n\u0398\nk\nl\n");
+#endif
+    std::cout << "Command \"ga\" returned: " << text.c_str() << std::endl;
+    wxVector<Position::type> vec;
+    wxStringTokenizer tkz(text, wxT("\n"));
+    while ( tkz.HasMoreTokens() )
+    {
+        wxString curcoord = tkz.GetNextToken();
+        //std::cout << v << std::endl;
+        coords.push_back(new wxString(curcoord));
+    }
+
+    nraxes = coords.size();
 }
 
 
@@ -489,20 +430,15 @@ Position PM301::getcurpos()
     s->Read(reinterpret_cast<char*>(&reply), msglen);
     wxString text(reply.msg,wxConvUTF8);
 #else
-    static double a=10.46;
-    static double b=20.51;
-    static double c=30.58;
+    static double pos[]={3.21,91.19,324.19,-1239.09, 9234,93,-0.2};
     wxString text;
-    text.Printf(_T(" axis1: %lf\n axis2: %lf\n axis3: %lf\n"), a,b,c);
-    c+=0.1;
-    b+=0.9;
-    a+=1.2;
+    for(size_t i=0; i < get_nraxes(); ++i) {
+        text.Append(wxString::Format(" axis%d: %lf\n", i+1, pos[i]));
+        pos[i] += 0.9;
+    }
 #endif
 
-//    wxRegEx rePos(_T("[[:digit:]]+\n"));
-//    wxString num = rePos.GetMatch(text, 1);
-
-    std::vector<Position::type> vec;
+    wxVector<Position::type> vec;
     wxStringTokenizer tkz(text, wxT("\n"));
     while ( tkz.HasMoreTokens() )
     {
@@ -514,27 +450,10 @@ Position PM301::getcurpos()
         vec.push_back( v );
     }
 
-    //{
-
-    //}
-    // if ( reEmail.Matches(text) )
-    // {
-    //     wxString text = reEmail.GetMatch(email);
-    //     wxString username = reEmail.GetMatch(email, 1);
-    // }
-
-    // or we could do this to hide the email address
-//    size_t count = reEmail.ReplaceAll(text, "HIDDEN@\\2\\3");
-//    printf("text now contains %u hidden addresses", count);
-
-
-    //std::string b = wxT("abc");
-    //wxString a = b.c_str();
-    //wxLogError(wxT("bca"));
     Position p;
-    p.SetCoordinate(1,vec[0]);
-    p.SetCoordinate(2,vec[1]);
-    p.SetCoordinate(3,vec[2]);
+    for(size_t i=0; i < vec.size(); ++i) {
+        p.SetCoordinate(i+1,vec[i]);
+    }
     return p;
 }
 
@@ -556,7 +475,7 @@ void PM301::ToggleBatchMode(void)
     static bool batchstate = false;
     basiccontrol->Show(batchstate);
     if(batchstate && !checkjog->IsChecked())
-        axradiobox->Show(false);
+        axesradiobox->Show(false);
 
     batchmodelog->Show(!batchstate);
     batchstate = !batchstate;
@@ -627,7 +546,7 @@ void *BatchThread::Entry()
         pm301->SendMessage(file[i]);
     }
     batchmodetextctl_->AppendText(_T("Finished executing batch file"));
-    
+
     return NULL;
 }
 
@@ -664,8 +583,10 @@ void* PositionUpdateThread::Entry()
 
         //TODO only output BarePosition to statusbar
         // or ???
-        text.Printf(wxT("Position: x: %.2f,  y: %.2f,  \u0398: %.2f"),
-                    cp.GetCoordinate(1), cp.GetCoordinate(2), cp.GetCoordinate(3));
+        text.Printf(wxT("Position:"));
+        for(size_t i = 0; i < pm301->get_nraxes(); ++i) {
+            text.Append(wxString::Format(" %s: %.2f", *pm301->coords[i], cp.GetCoordinate(i+1)));
+        }
         WriteText(text,cp, 0);
         wxThread::Sleep(900);
     }
@@ -685,7 +606,7 @@ void PM301::OnPositionUpdateClick( wxCommandEvent& event )
         else
             posthread = NULL;
             statusbar->SetStatusText(wxEmptyString, 0);
-            
+
     }
     else
     {
@@ -703,48 +624,21 @@ void PM301::OnPositionUpdateClick( wxCommandEvent& event )
 }
 
 
-void PM301::GeneralSpinCtrlUpdate(const wxString& coord)
-{
-    wxSpinCtrlDouble *cur = NULL;
-    //wxSpinCtrlDouble *tmp = NULL;
-    if(coord == wxT("x"))
-        cur = xSpinCtrl;
-    else if(coord == wxT("y"))
-        cur = ySpinCtrl;
-    else if(coord == wxT("phi"))
-        cur = tSpinCtrl;
-    else
-        return;
-
-    int entered = cur->GetValue();
-    double value = entered;
-    //if(!entered.ToDouble(&value)){
-    //    wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
-        //set default value ?!?!?
-    //    return;
-    //}
-
-    check_and_update_position(cur, coord, value);
-
-}
-
-
-
 /*
  * wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BUTTON3
  */
 
 void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
-{    
+{
     wxMessageDialog dialog( NULL, wxT("Are you sure that you want to reset the stepper positions to zero?"),
                             wxT("Warning"), wxNO_DEFAULT | wxYES_NO | wxICON_INFORMATION);
         switch(dialog.ShowModal()) {
         case wxID_YES:
             // only call this if position update thread is not running
-            //if(posthread == NULL) {
-                xSpinCtrl->SetValue(0.0);
-                ySpinCtrl->SetValue(0.0);
-                tSpinCtrl->SetValue(0.0);
+            //if(posthread == NULL) { axissc::iterator end;
+
+            for (wxVector<wxSpinCtrlDouble*>::iterator it = axissc.begin(); it != axissc.end(); ++it)
+                (*it)->SetValue(0.0);
             //}
             SendMessage("set zero");
             break;
@@ -756,53 +650,45 @@ void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
         }
 }
 
-void PM301::OnSpinctrlUpdated( wxSpinDoubleEvent& event )
+void PM301::OnSpinCTRLUpdated( wxCommandEvent& event ) //wxSpinDoubleEvent& event )
 {
-    std::cout << "update" << std::endl;
-    GeneralSpinCtrlUpdate(wxT("x"));
-}
 
-void PM301::OnSpinctrl1Updated( wxSpinDoubleEvent& event )
-{
-    std::cout << "update" << std::endl;
-    GeneralSpinCtrlUpdate(wxT("y"));
-}
+    //int id = 0;
+    // wxSpinCtrlDouble *ptr = (wxSpinCtrlDouble*)event.GetEventObject();
+    // for (wxVector<wxSpinCtrlDouble*>::iterator it = axissc.begin(); it != axissc.end(); ++it, id++) {
+    //     if (ptr == *it)
+    //         break;
+    // }
+    int id = event.GetId() - ID_SPINCTRLS;
+    if(id < 0 || id >= (int)get_nraxes()) {
+        wxLogError("Event ID in SpinCtrl Handler wrong");
+    }
 
-void PM301::OnSpinctrl2Updated( wxSpinDoubleEvent& event )
-{
-    std::cout << "update" << std::endl;
-    GeneralSpinCtrlUpdate(wxT("phi"));
+    std::cout << id << " sc update " << std::endl;
+    int entered = axissc[id]->GetValue();
+    double value = entered;
+    // if(!entered.ToDouble(&value)){
+    //     wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
+    //     //set default value ?!?!?
+    //     return;
+    // }
+    check_and_update_position(axissc[id], id, value);
 }
-
-/*
- * wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BITMAPBUTTON
- */
 
 void PM301::OnBitmapbuttonClick( wxCommandEvent& event )
 {
-    xSpinCtrl->SetValue(get_cp().GetCoordinate(1));
+    // wxBitmapButton* ptr = (wxBitmapButton*)event.GetEventObject();
+    // int i = 0;
+    // for (wxVector<wxBitmapButton*>::iterator it = axisbb.begin(); it != axisbb.end(); ++it, i++) {
+    //     if (ptr == *it)
+    //         break;
+    // }
 
+    int id = event.GetId() - ID_BITMAPBUTTONS;
+    if(id < 0 || id >= (int)get_nraxes()) {
+        wxLogError("Event ID in Bitmapbutton Handler wrong");
+    }
+
+    std::cout << " bitmap button " << id << " clicked " << std::endl;
+    axissc[id]->SetValue(get_cp().GetCoordinate(id+1));
 }
-
-
-/*
- * wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BITMAPBUTTON1
- */
-
-void PM301::OnBitmapbutton1Click( wxCommandEvent& event )
-{
-    ySpinCtrl->SetValue(get_cp().GetCoordinate(2));
-}
-
-
-/*
- * wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BITMAPBUTTON2
- */
-
-void PM301::OnBitmapbutton2Click( wxCommandEvent& event )
-{
-        tSpinCtrl->SetValue(get_cp().GetCoordinate(3));
-}
-
-
-
