@@ -278,9 +278,7 @@ void catch_int(int sig)
         board->getConfig().setAxisElement(it->first, "Position", bp.GetCoordinate(it->first));
     }
 
-    // FIXME use system("xml_pp xmlfilename");
-    // (board->getConfig()).writeconfig();
-
+    (board->getConfig()).writeconfig();
     _exit(1);
 }
 

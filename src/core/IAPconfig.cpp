@@ -37,5 +37,7 @@ IAPconfig::IAPconfig(const std::string& configfile) :
 
 void IAPconfig::writeconfig() const
 {
-    write_xml(filename, params_);
+    //boost::property_tree::xml_writer_settings<char> settings('\t', 1);
+    boost::property_tree::xml_writer_settings<char> settings(' ', 2);
+    write_xml(filename, params_, std::locale(), settings);
 }
