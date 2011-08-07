@@ -87,7 +87,7 @@ If you want to execute a PM381 command which is not supported by the
 server, you can simply type in the command (with the address
 specifier) in the cli. Example:
 
-    #> 01OC
+    #> 1OC
 
 MOVES GUI:
 ---------------
