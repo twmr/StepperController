@@ -13,12 +13,19 @@ servo/stepper motors at the Applied Physics Institute (TU Vienna).
 
 The software is written in C++, is platform independent and uses the
 C++ [Boost library](http://www.boost.org). For the communication with
-the rs232 interface the C++ ctb library is used access the serial port
+the rs232 interface the C++ ctb library is used to access the serial port
 (this library currently only supports Windows and Linux).
 
 The GUI (acting as the network client) uses the platform independent
 [wxWidgets](http://www.wxwidgets.org) Toolkit, but does not depend on
 Boost and on libctb.
+
+Requirements:
+-------------
+
+wxWidgets 2.9.0
+boost 1.44
+libctb 0.16
 
 Installation:
 -------------
@@ -40,7 +47,8 @@ it according to the Readme file!
 MOVES:
 ---------
 
-to compile the core program for MOVES create a build directory
+to compile the core program and the GUI (if the wxWidgets devel files
+are installed) for MOVES create a build directory
 
     mkdir build && cd build
 
@@ -75,20 +83,27 @@ Execute it with
 
     ./moves_client_cli -b ../example.bat
 
+If you want to execute a PM381 command which is not supported by the
+server, you can simply type in the command (with the address
+specifier) in the cli. Example:
+
+    #> 01OC
+
 MOVES GUI:
 ---------------
 
 In addition to the cli client program a GUI was developed using
-wxWidgets, which supports only a subset of the offerd commands of the
-PM381 controller. To compile it type
+wxWidgets, which supports only a subset of the offered commands of the
+PM381 controller. It was compiled in the previous step, to run it type
 
-    cd src/gui && make
+    ./src/gui/moves_gui
 
-If this does not work (most likely) then you need to regenerate the
-Makefile, do this inside/with DialogBlocks.
+If you want the GUI to periodically ask the hardware about its current
+motor position then you need to start the Position-update-thread under
+Operations. The current position is displayed in the Statusbar then.
 
-Then run the program with (on Linux)
-    ./GCCRelease/Project1
+Under Operations-Batch Mode you can, like in the cli, send batchfiles
+to the hardware.
 
 Development:
 ------------
@@ -96,9 +111,6 @@ Development:
 If you would like to see certain features implemented or support for
 certain devices, please use
 [githubs issue tracker](https://github.com/thisch/StepperController).
-
-Usage Instructions (GUI):
-----------------------
 
 Moves/IAP specific stuff:
 ---------------------------
@@ -110,6 +122,7 @@ y:
 
 TODO:
 -----
+* implement wait command
 * remove Multiplier xml element from parameters.xml
 * Windows build support
 * generalize the client and server programs
