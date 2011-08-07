@@ -66,11 +66,11 @@ the server program *moves_server*, it also contains all the parameters
 for each axis. To run the server (the port can be set in the XML file)
 type
 
-    ./moves_server -f ../parameters.xml
+    ./src/core/moves_server -f ../parameters.xml
 
 start the cli client from another terminal with
 
-    ./moves_client_cli
+    ./src/core/moves_client_cli
 
 to see all accepted program options use the -h or --help command line
 option. *moves_client_cli* supports executing batch-files which are
@@ -81,7 +81,7 @@ without a batch-file and type at the prompt (*#>*) *help*.
 Look at example.bat for a simple batch file.
 Execute it with
 
-    ./moves_client_cli -b ../example.bat
+    ./src/core/moves_client_cli -b ../example.bat
 
 If you want to execute a PM381 command which is not supported by the
 server, you can simply type in the command (with the address
