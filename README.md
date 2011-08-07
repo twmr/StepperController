@@ -23,9 +23,9 @@ Boost and on libctb.
 Requirements:
 -------------
 
-wxWidgets 2.9.0
-boost 1.44
-libctb 0.16
+* wxWidgets 2.9.0
+* boost 1.44
+* libctb 0.16
 
 Installation:
 -------------
