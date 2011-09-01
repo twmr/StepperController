@@ -372,9 +372,9 @@ void PM301::OnRadioboxSelected( wxCommandEvent& event )
 void PM301::check_and_update_position(wxSpinCtrlDouble* ctrl, const size_t idx, const double curval)
 {
     wxString text;
-    text.Printf(wxT("sa%u"),idx);
+    text.Printf("sa%u",(unsigned int)idx);
     SendMessage(text);
-    text.Printf(wxT("1MA%d"), (int)round(curval));
+    text.Printf("1MA%d", (int)round(curval));
     SendMessage(text);
 }
 
