@@ -364,7 +364,7 @@ void PM301::OnRadioboxSelected( wxCommandEvent& event )
 {
     char buf[4];
     int selected = axesradiobox->GetSelection();
-    sprintf(buf,"sa%d",selected);
+    sprintf(buf,"sa%d",selected+1);
     SendMessage(buf);
 }
 
@@ -388,7 +388,7 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
     if(checkjog->IsChecked()) {
         SendMessage("1AR");
         axesradiobox->Show(true);
-        SendMessage("sa0");
+        SendMessage("sa1");
 
     } else
     {
