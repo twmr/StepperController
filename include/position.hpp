@@ -42,6 +42,7 @@ class DummyPosition
 public:
     typedef T type;
     typedef std::map<size_t, std::string> id_desc_map_type;
+    typedef std::map<size_t, std::string> id_unit_map_type;
     typedef std::map<size_t, T> coord_type;
 
     DummyPosition() :
@@ -106,7 +107,20 @@ public:
             std::stringstream stream;
             for(typename coord_type::const_iterator itr = begin();
                 itr != end(); ++itr){
-                stream << "axis " << map[(*itr).first] << ": "
+                stream << map[(*itr).first] << ": "
+                       << (*itr).second << "\n";
+            }
+
+            strcpy(buf, stream.str().c_str());
+        };
+    
+    void GetPositionString(char *buf, id_desc_map_type& map, id_unit_map_type& units) const
+        {
+            std::stringstream stream;
+            for(typename coord_type::const_iterator itr = begin();
+                itr != end(); ++itr){
+                stream << map[(*itr).first] << "[" << units[(*itr).first] 
+		       << "]: "
                        << (*itr).second << "\n";
             }
 

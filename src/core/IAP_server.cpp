@@ -128,21 +128,25 @@ namespace IAPServer
             //print bare positions
             BarePosition bp = board->createBarePosition();
             board->get_cur_position(bp);
-            bp.GetPositionString(message.msg);
+            map<size_t,string>& id_string_map = board->get_coord_map();
+            bp.GetPositionString(message.msg,id_string_map);
         }
         else if(! data.compare("pp")) {
             //print positions
             Position p = board->createPosition();
             board->get_cur_position(p);
-            p.GetPositionString(message.msg);
+            map<size_t,string>& id_string_map = board->get_coord_map();
+            map<size_t,string>& id_unit_map = board->get_unit_map();
+            p.GetPositionString(message.msg, id_string_map, id_unit_map);
         }
         else if (! data.compare("ga")) {
             map<size_t,string>& id_string_map = board->get_coord_map();
+            map<size_t,string>& id_unit_map = board->get_unit_map();
             ostringstream os;
 
             for(map<size_t, string>::const_iterator it = id_string_map.begin();
                         it != id_string_map.end(); ++it){
-                os << it->first << ":" << it->second << std::endl;
+	      os << it->first << ":" << it->second << ":" << id_unit_map[it->first] << std::endl;
             }
             prepare_tcp_message(os.str());
         }
@@ -244,12 +248,16 @@ namespace IAPServer
                         cout << it->first << ": " << it->second << " ";
                     cout << endl;
 
+		    int ret;
                     if(data[1] == 'a') // absolute move
-                        board->move_to(mypos);
+                        ret = board->move_to(mypos);
                     else // data[1] = 'r'  -> relative move
-                        board->move_rel(mypos);
+                        ret = board->move_rel(mypos);
 
-                    prepare_tcp_message("Success");
+		    if(ret < 0)
+	                    prepare_tcp_message("Controller Error");
+		    else 
+	                    prepare_tcp_message("Success");
                 }
                 else
                     prepare_tcp_message("parse_multiplett_failure");

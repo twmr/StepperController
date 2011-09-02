@@ -27,7 +27,7 @@
 #include <fstream>
 #include <boost/property_tree/ptree_fwd.hpp>
 
-#include "ctb-0.15/ctb.h"
+#include "ctb-0.16/ctb.h"
 #include "global.hpp"
 
 class RS232 {

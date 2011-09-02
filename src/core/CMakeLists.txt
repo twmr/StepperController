@@ -1,4 +1,4 @@
-add_definitions(-DSERIAL_DEBUG)
+#add_definitions(-DSERIAL_DEBUG)
 
 set(CMAKE_CXX_FLAGS "-Wall -std=c++0x -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-Wextra")

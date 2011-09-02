@@ -55,18 +55,18 @@ public:
     ~Axis() {};
     size_t get_id() const { return ID_; };
     std::string get_desc() const { return Desc_; };
+    std::string get_unitname() const { return UnitName_; };
     double get_factor() const { return UnitFactor_; };
     void printAxis(void) const;
     int UpdateConfiguration(void) const;
 
-    void move_rel(const BarePosition::type) const;
-    void move_abs(const BarePosition::type) const;
+    int move_rel(const BarePosition::type) const;
+    int move_abs(const BarePosition::type) const;
 
 private:
     boost::property_tree::ptree axispt_;
     size_t ID_;
     std::string Desc_;
-
     std::string UnitName_;
     double UnitFactor_;
     long BaseSpeed_;
@@ -150,10 +150,10 @@ public:
     size_t GetAxisID() const;
     int setaxisnum(const size_t);
 
-    void move_rel(const Position& deltaPos) const;
-    void move_to(const Position& absPos) const;
-    void move_rel(const BarePosition& deltaPos) const;
-    void move_to(const BarePosition& absPos) const;
+    int move_rel(const Position& deltaPos) const;
+    int move_to(const Position& absPos) const;
+    int move_rel(const BarePosition& deltaPos) const;
+    int move_to(const BarePosition& absPos) const;
 
     void get_cur_position(BarePosition& retbarepos) const;
     void get_cur_position(Position& retpos) const;
@@ -192,6 +192,9 @@ public:
     std::map<size_t, std::string>& get_coord_map()
         { return coordinate_map; };
 
+    std::map<size_t, std::string>& get_unit_map()
+        { return unit_map; };
+
     std::map<std::string, size_t>& get_inv_coord_map()
         { return inv_coordinate_map; };
 
@@ -205,6 +208,7 @@ private:
     STD_TR1::shared_ptr< std::mutex > boardmutex;
     IAPconfig &config_;
     std::map<size_t, std::string> coordinate_map;
+    std::map<size_t, std::string> unit_map;
     std::map<std::string, size_t> inv_coordinate_map;
     // std::map<size_t, BarePosition::type> bp_coordiante_map;
     // std::map<size_t, Position::type> p_coordiante_map;

@@ -16,13 +16,12 @@
     <FastJogSpeed>400</FastJogSpeed>
     <CreepSteps>50</CreepSteps>
     <Accel>10000</Accel>
-    <LowerLimit>-4000000</LowerLimit>
-    <UpperLimit>4000000</UpperLimit>
+    <LowerLimit>-1475</LowerLimit>
+    <UpperLimit>1475</UpperLimit>
     <Position>0</Position>
-    <Multiplier>400.0</Multiplier>
     <UnitConversion>
       <unitname>mm</unitname>
-      <factor>2.0</factor>
+      <factor>6.77966e-4</factor>
     </UnitConversion>
   </axis>
   <axis id="2" descriptor="y">
@@ -32,29 +31,27 @@
     <FastJogSpeed>400</FastJogSpeed>
     <CreepSteps>50</CreepSteps>
     <Accel>10000</Accel>
-    <LowerLimit>-4000000</LowerLimit>
-    <UpperLimit>4000000</UpperLimit>
-    <Position>0</Position>
-    <Multiplier>400.0</Multiplier>
+    <LowerLimit>-4500</LowerLimit>
+    <UpperLimit>4500</UpperLimit>
+    <Position>1234</Position>
     <UnitConversion>
       <unitname>mm</unitname>
-      <factor>2.0</factor>
+      <factor>1.0937500e-3</factor>
     </UnitConversion>
   </axis>
-  <axis id="3" descriptor="height">
+  <axis id="3" descriptor="phi">
     <BaseSpeed>100</BaseSpeed>
     <SlewSpeed>250</SlewSpeed>
     <SlowJogSpeed>100</SlowJogSpeed>
     <FastJogSpeed>400</FastJogSpeed>
     <CreepSteps>50</CreepSteps>
     <Accel>10000</Accel>
-    <LowerLimit>-19444</LowerLimit>
-    <UpperLimit>19444</UpperLimit>
+    <LowerLimit>-14000</LowerLimit>
+    <UpperLimit>14000</UpperLimit>
     <Position>0</Position>
-    <Multiplier>194.444445</Multiplier>
     <UnitConversion>
-      <unitname>mm</unitname>
-      <factor>2.0</factor>
+      <unitname>deg</unitname>
+      <factor>5.14286e-2</factor>
     </UnitConversion>
   </axis>
 </config>

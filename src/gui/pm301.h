@@ -147,7 +147,7 @@ public:
     void SendMessage(const std::string&);
     void SendMessage(const char *);
     void send();
-    void check_and_update_position(wxSpinCtrlDouble*, const size_t idx, const double);
+    void check_and_update_position(wxSpinCtrlDouble*, wxString& , const double);
     void ToggleBatchMode(void);
 
     /// Should we show tooltips?
@@ -196,6 +196,7 @@ public:
 
     size_t get_nraxes() const { return nraxes; };
     wxVector<wxString*> coords;
+    wxVector<wxString*> units;
 
 private:
     wxSocketClient* s;

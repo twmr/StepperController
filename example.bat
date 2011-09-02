@@ -6,5 +6,4 @@ set jog
 sleep 10
 unset jog
 1IR
-mr 2.0,4.0,6.0
-mr 2.0,-4.0,-6.0
+mr x=2.0,y=4.0,phi=6.0

@@ -90,14 +90,16 @@ int Axis::UpdateConfiguration() const
 }
 
 
-void Axis::move_rel(const BarePosition::type delta) const
+int Axis::move_rel(const BarePosition::type delta) const
 {
-    Board_->send_command_quiet("1MR" + boost::lexical_cast<std::string>(delta));
+  return Board_->send_command_quiet("1MR" + 
+				    boost::lexical_cast<std::string>(delta));
 }
 
-void Axis::move_abs(const BarePosition::type abs) const
+int Axis::move_abs(const BarePosition::type abs) const
 {
-    Board_->send_command_quiet("1MA" + boost::lexical_cast<std::string>(abs));
+  return Board_->send_command_quiet("1MA" + 
+				    boost::lexical_cast<std::string>(abs));
 }
 
 
@@ -128,6 +130,7 @@ IAPBoard::IAPBoard(IAPconfig& conf) :
 
             //creating bidirectional maps for axis descriptor <-> axis id conversion
             coordinate_map.insert(pair<size_t,string>(axes.back().get_id(), axes.back().get_desc()));
+            unit_map.insert(pair<size_t,string>(axes.back().get_id(), axes.back().get_unitname()));
             inv_coordinate_map.insert(pair<string,size_t>(axes.back().get_desc(), axes.back().get_id()));
 
             iap_default_position.SetCoordinate(axes.back().get_id(), 0);
@@ -236,7 +239,7 @@ int IAPBoard::send_command(const std::string & cmd, char* replymsg) const
     std::string reply = send_lowlevel(cmd);
 
     // analyze reply msg from controller
-    if(reply[2] == '!') {
+    if(reply[3] == '!') {
         serial_interface->rslog(reply,"CONTROLLER ERROR ");
         return -E_PM381_ERROR_MSG;
     }
@@ -419,46 +422,52 @@ int IAPBoard::save_setaxisnum(const size_t id) const
     return ret;
 }
 
-void IAPBoard::move_rel(const Position& rel) const
+int IAPBoard::move_rel(const Position& rel) const
 {
     BarePosition bp;
     conv2bareposition(bp, rel);
-    move_rel(bp);
+    return move_rel(bp);
 }
 
-//TODO implement/check SOFT_LIMITS
-void IAPBoard::move_rel(const BarePosition& rel) const
+int IAPBoard::move_rel(const BarePosition& rel) const
 {
+    int ret=0;
     SaveEnvironment();
 
     for(BarePosition::coord_type::const_iterator
             it = rel.begin(); it != rel.end(); ++it) {
         save_setaxisnum(it->first);
-        getAxis(it->first)->move_rel(it->second);
+        ret = getAxis(it->first)->move_rel(it->second);
+	if (ret < 0)
+	  break;
     }
 
     RestoreEnvironment();
+    return ret;
 }
 
-void IAPBoard::move_to(const Position& abs) const
+int IAPBoard::move_to(const Position& abs) const
 {
     BarePosition bp;
     conv2bareposition(bp, abs);
-    move_to(bp);
+    return move_to(bp);
 }
 
-//TODO implement/check SOFT_LIMITS
-void IAPBoard::move_to(const BarePosition& abs) const
+int IAPBoard::move_to(const BarePosition& abs) const
 {
+    int ret = 0;
     SaveEnvironment();
 
     for(BarePosition::coord_type::const_iterator
             it = abs.begin(); it != abs.end(); ++it) {
         save_setaxisnum(it->first);
-        getAxis(it->first)->move_abs(it->second);
+        ret = getAxis(it->first)->move_abs(it->second);
+	if (ret < 0)
+	  break;
     }
 
     RestoreEnvironment();
+    return ret;
 }
 
 

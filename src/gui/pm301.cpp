@@ -66,6 +66,8 @@ BEGIN_EVENT_TABLE( PM301, wxFrame )
 ////@end PM301 event table entries
 
     EVT_SOCKET(SOCKET_ID, PM301::OnSocketEvent )
+    
+    EVT_RADIOBOX( ID_AXESRADIOBOX, PM301::OnRadioboxSelected )
 
 END_EVENT_TABLE()
 
@@ -260,7 +262,7 @@ void PM301::CreateControls()
     for(size_t i=0; i < get_nraxes(); ++i) {
         axisbs.push_back(new wxBoxSizer(wxHORIZONTAL));
         axisst.push_back(new wxStaticText(itemStaticBoxSizer10->GetStaticBox(), -1,
-                                          wxString::Format("%s [\u03BCm]:", *coords[i]),
+                                          wxString::Format("%s [%s]:", *coords[i], *units[i]),
                                           wxDefaultPosition, wxDefaultSize, 0));
         axissc.push_back(new wxSpinCtrlDouble(itemStaticBoxSizer10->GetStaticBox(), ID_SPINCTRLS+i, _T("0"),
                                               wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -5000, 5000, 0));
@@ -269,6 +271,7 @@ void PM301::CreateControls()
 
         axissc[i]->SetValue(initpos.GetCoordinate(i+1));
         axissc[i]->SetDigits(2);
+        axissc[i]->SetIncrement(0.01);
 
         axisbs[i]->Add(axisst[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
         axisbs[i]->Add(axissc[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
@@ -286,7 +289,8 @@ void PM301::CreateControls()
     axesradiobox->SetSelection(0);
     axesradiobox->Show(false);
     jogmodelayout->Add(axesradiobox, 0, wxGROW, 5);
-
+    //itemStaticBoxSizer10Static->Disable();
+    itemButton11->Disable();
     batchmodelog->Show(false);
     mainswitcher->Layout();
 }
@@ -369,12 +373,11 @@ void PM301::OnRadioboxSelected( wxCommandEvent& event )
 }
 
 
-void PM301::check_and_update_position(wxSpinCtrlDouble* ctrl, const size_t idx, const double curval)
+void PM301::check_and_update_position(wxSpinCtrlDouble* ctrl, wxString& axdesc, const double curval)
 {
     wxString text;
-    text.Printf("sa%u",(unsigned int)idx);
-    SendMessage(text);
-    text.Printf("1MA%d", (int)round(curval));
+    text.Printf("ma %s=%f", axdesc, curval);
+    std::cout << "command to update pos: " << text.c_str() << std::endl;
     SendMessage(text);
 }
 
@@ -408,21 +411,24 @@ void PM301::initaxes()
 #else
     wxString text;
 
-    text.Printf("1:x\n2:y\n3:z\n4:\u0398\n5:k\n6:l\n");
+    text.Printf("1:x:mm\n2:y:mm\n3:z:um\n4:\u0398:deg\n5:k:m\n6:l:km\n");
 #endif
     std::cout << "Command \"ga\" returned: " << text.c_str() << std::endl;
     wxVector<Position::type> vec;
     wxStringTokenizer tkz(text, wxT("\n"));
     while ( tkz.HasMoreTokens() )
     {
-        wxString curcoord = tkz.GetNextToken();
-        unsigned long id;
-
-        curcoord.BeforeFirst(':').ToULong(&id);
-        wxString coordname = curcoord.AfterFirst(':');
-        std::cout << "GUI registering axis with id " << id << " and coordname " << coordname
+	wxStringTokenizer line(tkz.GetNextToken(), wxT(":"));
+	unsigned long id;
+        line.GetNextToken().ToULong(&id);
+        wxString coordname = line.GetNextToken();
+	wxString unitname = line.GetNextToken();
+     
+	std::cout << "GUI registering axis with id " << id << ", coordname " << coordname
+		  << "and unit " << unitname
                   << std::endl;
         coords.push_back(new wxString(coordname));
+        units.push_back(new wxString(unitname));
     }
 
     nraxes = coords.size();
@@ -450,9 +456,17 @@ Position PM301::getcurpos()
     {
         wxString token = tkz.GetNextToken();
         Position::type v;
-        int d;
-        sscanf(token.mb_str()," axis%d: %f", &d, &v);
-        //std::cout << v << std::endl;
+	double vtmp;
+	//char axdesc[32];
+	//char unitdesc[8];
+		
+        wxString axdesc  = token.BeforeFirst(':');
+        token.AfterFirst(':').ToDouble(&vtmp);
+	v = vtmp;
+
+	// sscanf(token.mb_str(),"%s[%s]: %f", axdesc, unitdesc, &v);
+        std::cout << "GUI_position_parser: " << axdesc.c_str()
+		   << " " << v << std::endl;
         vec.push_back( v );
     }
 
@@ -591,10 +605,10 @@ void* PositionUpdateThread::Entry()
         // or ???
         text.Printf(wxT("Position:"));
         for(size_t i = 0; i < pm301->get_nraxes(); ++i) {
-            text.Append(wxString::Format(" %s: %.2f", *pm301->coords[i], cp.GetCoordinate(i+1)));
+	  text.Append(wxString::Format("%s: %.4f %s\t", *pm301->coords[i], cp.GetCoordinate(i+1), *pm301->units[i]));
         }
         WriteText(text,cp, 0);
-        wxThread::Sleep(900);
+        wxThread::Sleep(850);
     }
     return NULL;
 }
@@ -658,27 +672,21 @@ void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
 
 void PM301::OnSpinCTRLUpdated( wxCommandEvent& event ) //wxSpinDoubleEvent& event )
 {
-
-    //int id = 0;
-    // wxSpinCtrlDouble *ptr = (wxSpinCtrlDouble*)event.GetEventObject();
-    // for (wxVector<wxSpinCtrlDouble*>::iterator it = axissc.begin(); it != axissc.end(); ++it, id++) {
-    //     if (ptr == *it)
-    //         break;
-    // }
     int id = event.GetId() - ID_SPINCTRLS;
+    //std::cout << "ID: " << id << std::endl;
     if(id < 0 || id >= (int)get_nraxes()) {
         wxLogError("Event ID in SpinCtrl Handler wrong");
     }
 
-    std::cout << id << " sc update " << std::endl;
-    int entered = axissc[id]->GetValue();
-    double value = entered;
+    double value = axissc[id]->GetValue();
+    std::cout << value << " sc value update " << std::endl;
     // if(!entered.ToDouble(&value)){
     //     wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
     //     //set default value ?!?!?
     //     return;
     // }
-    check_and_update_position(axissc[id], id, value);
+
+    check_and_update_position(axissc[id], *coords[id] , value);
 }
 
 void PM301::OnBitmapbuttonClick( wxCommandEvent& event )
