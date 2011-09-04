@@ -77,6 +77,7 @@ int Axis::UpdateConfiguration() const
     if( Board_->setaxisnum(ID_) < 0 )
         return -1;
 
+    // TODO try catch block ?!?!?
     sprintf(buf,"1sb%ld",BaseSpeed_); Board_->send_command_quiet(buf);
     sprintf(buf,"1sv%ld",SlewSpeed_); Board_->send_command_quiet(buf);
     sprintf(buf,"1sj%ld",SlowJogSpeed_); Board_->send_command_quiet(buf);
@@ -226,6 +227,11 @@ std::string IAPBoard::send_lowlevel(const std::string &cmd) const
         }
     }
 
+#ifdef SERIAL_DEBUG // if defined run without hardware
+    if(cmd == "ERRORMSG_TEST")
+        sprintf(buffer,"01:! this is a sample error msg\r\n");
+#endif
+
     std::cout <<  " - received: len=" << strlen(buffer)
               << " buf: " << buffer;
 
@@ -237,27 +243,18 @@ std::string IAPBoard::send_lowlevel(const std::string &cmd) const
 int IAPBoard::send_command(const std::string & cmd, char* replymsg) const
 {
     std::string reply = send_lowlevel(cmd);
+    if(reply.length() < 5)
+            return -E_SIZE_PM381_REPLY_SHORT;
+
+    std::string reptrunc = reply.substr(3,reply.length()-5);
+    if(replymsg) strcpy(replymsg,reptrunc.c_str());
 
     // analyze reply msg from controller
     if(reply[3] == '!') {
-        serial_interface->rslog(reply,"CONTROLLER ERROR ");
+        serial_interface->rslog(reptrunc ,"CONTROLLER ERROR ");
         return -E_PM381_ERROR_MSG;
     }
-
-    // if(buffer[0] == ' ') {
-    //     cout << "command with special return value : " << cmd;
-    //     return;
-    // }
-
-    if(reply.length() > 5) {
-        if(replymsg) {
-            std::string tmp = reply.substr(3,reply.length()-5);
-            strcpy(replymsg,tmp.c_str());
-        }
-        return 0;
-    }
-    else
-        return -E_SIZE_PM381_REPLY_SHORT;
+    return 0;
 }
 
 /* returns the integer return code of the command */
@@ -438,8 +435,8 @@ int IAPBoard::move_rel(const BarePosition& rel) const
             it = rel.begin(); it != rel.end(); ++it) {
         save_setaxisnum(it->first);
         ret = getAxis(it->first)->move_rel(it->second);
-	if (ret < 0)
-	  break;
+        if (ret < 0)
+            break;
     }
 
     RestoreEnvironment();
@@ -462,8 +459,8 @@ int IAPBoard::move_to(const BarePosition& abs) const
             it = abs.begin(); it != abs.end(); ++it) {
         save_setaxisnum(it->first);
         ret = getAxis(it->first)->move_abs(it->second);
-	if (ret < 0)
-	  break;
+        if (ret < 0)
+            break;
     }
 
     RestoreEnvironment();
@@ -479,7 +476,8 @@ void IAPBoard::get_cur_position(BarePosition& retbarepos) const
 #ifndef SERIAL_DEBUG
     const std::string line(buf);
 #else
-    const std::string line("    Channel 5 = 7352\n        Channel 3 = 2000\n        Channel 1 = 3900\n        Channel 4 = 0\n        Channel 2 = 1207\n");
+    // const std::string line("    Channel 5 = 7352\n        Channel 3 = 2000\n        Channel 1 = 3900\n        Channel 4 = 0\n        Channel 2 = 1207\n");
+    const std::string line("    Channel 1 = 7352\n        Channel 2 = 2000\n        Channel 3 = 3900\n");
 #endif
 
     const boost::regex re("\\d = [-]?\\d+");

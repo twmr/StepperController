@@ -34,7 +34,7 @@
 ////@begin XPM images
 ////@end XPM images
 
-//#undef TEST_NETWORK
+// #undef TEST_NETWORK
 #define TEST_NETWORK
 
 /*
@@ -146,8 +146,12 @@ void PM301::Init()
     s->Notify(true);
 
     //Block the GUI
-    s->Connect(addr, true);
-    std::cout << "connected to localhost" << std::endl;
+    if(s->Connect(addr, true))
+        std::cout << "connected to localhost" << std::endl;
+    else {
+        std::cerr << "connection failure" << std::endl;
+        exit(1);
+    }
 #endif
 }
 
@@ -158,8 +162,16 @@ void PM301::OnSocketEvent(wxSocketEvent& event)
     switch(event.GetSocketEvent())
     {
     case wxSOCKET_INPUT:
-        std::cout << "INPUT event received" << std::endl;
         sock->Read(reinterpret_cast<char*>(&reply), msglen);
+
+        if(reply.type == MSG_ERROR) {
+            std::cout << "error event received" << std::endl;
+            wxString errormsg;
+            errormsg.Printf(wxT("Controller ERROR: %s"), reply.msg);
+            wxMessageBox(errormsg, wxT("Warning"),
+                         wxOK | wxICON_INFORMATION, this);
+        }
+
         break;
     case wxSOCKET_LOST:
     default:
@@ -168,8 +180,6 @@ void PM301::OnSocketEvent(wxSocketEvent& event)
         break;
 
     }
-
-
 }
 
 
@@ -389,13 +399,13 @@ void PM301::check_and_update_position(wxSpinCtrlDouble* ctrl, wxString& axdesc, 
 void PM301::OnCheckboxClick( wxCommandEvent& event )
 {
     if(checkjog->IsChecked()) {
-        SendMessage("1AR");
+        SendMessage("set jog");
         axesradiobox->Show(true);
         SendMessage("sa1");
 
     } else
     {
-        SendMessage("1IR");
+        SendMessage("unset jog");
         axesradiobox->Show(false);
     }
 
@@ -418,14 +428,13 @@ void PM301::initaxes()
     wxStringTokenizer tkz(text, wxT("\n"));
     while ( tkz.HasMoreTokens() )
     {
-	wxStringTokenizer line(tkz.GetNextToken(), wxT(":"));
-	unsigned long id;
+        wxStringTokenizer line(tkz.GetNextToken(), wxT(":"));
+        unsigned long id;
         line.GetNextToken().ToULong(&id);
         wxString coordname = line.GetNextToken();
-	wxString unitname = line.GetNextToken();
-     
-	std::cout << "GUI registering axis with id " << id << ", coordname " << coordname
-		  << "and unit " << unitname
+        wxString unitname = line.GetNextToken();
+        std::cout << "GUI registering axis with id " << id << ", coordname " << coordname
+                  << "and unit " << unitname
                   << std::endl;
         coords.push_back(new wxString(coordname));
         units.push_back(new wxString(unitname));
@@ -456,17 +465,13 @@ Position PM301::getcurpos()
     {
         wxString token = tkz.GetNextToken();
         Position::type v;
-	double vtmp;
-	//char axdesc[32];
-	//char unitdesc[8];
-		
         wxString axdesc  = token.BeforeFirst(':');
+        double vtmp;
         token.AfterFirst(':').ToDouble(&vtmp);
-	v = vtmp;
+        v = vtmp;
 
-	// sscanf(token.mb_str(),"%s[%s]: %f", axdesc, unitdesc, &v);
-        std::cout << "GUI_position_parser: " << axdesc.c_str()
-		   << " " << v << std::endl;
+        // std::cout << "GUI_position_parser: " << axdesc.c_str()
+        //           << " " << v << std::endl;
         vec.push_back( v );
     }
 
@@ -605,7 +610,7 @@ void* PositionUpdateThread::Entry()
         // or ???
         text.Printf(wxT("Position:"));
         for(size_t i = 0; i < pm301->get_nraxes(); ++i) {
-	  text.Append(wxString::Format("%s: %.4f %s\t", *pm301->coords[i], cp.GetCoordinate(i+1), *pm301->units[i]));
+            text.Append(wxString::Format("%s: %.4f %s\t", *pm301->coords[i], cp.GetCoordinate(i+1), *pm301->units[i]));
         }
         WriteText(text,cp, 0);
         wxThread::Sleep(850);
@@ -625,7 +630,7 @@ void PM301::OnPositionUpdateClick( wxCommandEvent& event )
             wxLogError(wxT("Can't delete the thread!"));
         else
             posthread = NULL;
-            statusbar->SetStatusText(wxEmptyString, 0);
+        statusbar->SetStatusText(wxEmptyString, 0);
 
     }
     else
@@ -650,24 +655,25 @@ void PM301::OnPositionUpdateClick( wxCommandEvent& event )
 
 void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
 {
-    wxMessageDialog dialog( NULL, wxT("Are you sure that you want to reset the stepper positions to zero?"),
+    wxMessageDialog dialog( NULL,wxT("Are you sure that you want to reset the stepper" \
+                                     " positions to zero?"),
                             wxT("Warning"), wxNO_DEFAULT | wxYES_NO | wxICON_INFORMATION);
-        switch(dialog.ShowModal()) {
-        case wxID_YES:
-            // only call this if position update thread is not running
-            //if(posthread == NULL) { axissc::iterator end;
+    switch(dialog.ShowModal()) {
+    case wxID_YES:
+        // only call this if position update thread is not running
+        //if(posthread == NULL) {
 
-            for (wxVector<wxSpinCtrlDouble*>::iterator it = axissc.begin(); it != axissc.end(); ++it)
-                (*it)->SetValue(0.0);
-            //}
-            SendMessage("set zero");
-            break;
-        case wxID_NO:
-            //wxLogError(wxT("no"));
-            break;
-        default:
-            wxLogError(wxT("Unexpected wxMess Dialog return code!"));
-        }
+        for (wxVector<wxSpinCtrlDouble*>::iterator it = axissc.begin(); it != axissc.end(); ++it)
+            (*it)->SetValue(0.0);
+        //}
+        SendMessage("set zero");
+        break;
+    case wxID_NO:
+        //wxLogError(wxT("no"));
+        break;
+    default:
+        wxLogError(wxT("Unexpected wxMess Dialog return code!"));
+    }
 }
 
 void PM301::OnSpinCTRLUpdated( wxCommandEvent& event ) //wxSpinDoubleEvent& event )
@@ -679,7 +685,7 @@ void PM301::OnSpinCTRLUpdated( wxCommandEvent& event ) //wxSpinDoubleEvent& even
     }
 
     double value = axissc[id]->GetValue();
-    std::cout << value << " sc value update " << std::endl;
+    // std::cout << value << " sc value update " << std::endl;
     // if(!entered.ToDouble(&value)){
     //     wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
     //     //set default value ?!?!?

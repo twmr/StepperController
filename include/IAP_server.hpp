@@ -65,6 +65,10 @@ namespace IAPServer {
             data_.type = MSG_ERROR;
         }
 
+        void prepare_tcp_success_message() {
+            data_.msg[0]='\0';
+            data_.type = MSG_SUCCESS;
+        }
 
         void handle_read(const boost::system::error_code& error,
                          size_t bytes_transferred) {

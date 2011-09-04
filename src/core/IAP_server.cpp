@@ -115,6 +115,16 @@ namespace IAPServer
         if(! data.compare("help")) {
             prepare_tcp_message(helpMessage);
         }
+#ifdef SERIAL_DEBUG
+        else if(! data.compare("ERRORMSG_TEST")) {
+            int ret = board->send_command("ERRORMSG_TEST", message.msg);
+            if(ret < 0)
+                prepare_tcp_err_message(
+                    board->get_err_string(static_cast<pm381_err_t>(-ret), message.msg));
+            else
+                prepare_tcp_success_message();
+        }
+#endif
         else if(! data.compare("serialtest")) {
             // fixme lock this
             board->test(message.msg);
@@ -140,13 +150,15 @@ namespace IAPServer
             p.GetPositionString(message.msg, id_string_map, id_unit_map);
         }
         else if (! data.compare("ga")) {
+            //prints all registered axes + units + ids (used inside the GUI)
             map<size_t,string>& id_string_map = board->get_coord_map();
             map<size_t,string>& id_unit_map = board->get_unit_map();
             ostringstream os;
 
             for(map<size_t, string>::const_iterator it = id_string_map.begin();
                         it != id_string_map.end(); ++it){
-	      os << it->first << ":" << it->second << ":" << id_unit_map[it->first] << std::endl;
+                os << it->first << ":" << it->second << ":"
+                   << id_unit_map[it->first] << std::endl;
             }
             prepare_tcp_message(os.str());
         }
@@ -176,7 +188,7 @@ namespace IAPServer
                 }
 
                 else
-                    prepare_tcp_message("Set Axis CMD Succeeded");
+                    prepare_tcp_success_message();
                 return;
             }
 
@@ -189,7 +201,10 @@ namespace IAPServer
                     //enable jog mode
                     ret = board->send_command("1AR", message.msg);
                     if(ret < 0)
-                        prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
+                        prepare_tcp_err_message(
+                            board->get_err_string(static_cast<pm381_err_t>(-ret), message.msg));
+                    else
+                        prepare_tcp_success_message();
                 }
                 else if(! setvar.compare("zero")) {
                     // set current position to zero - this doesn't move
@@ -199,7 +214,7 @@ namespace IAPServer
                     prepare_tcp_message("TODO setzero return message");
                 }
                 else
-                    prepare_tcp_message("invalid set command (check syntax)");
+                    prepare_tcp_err_message("invalid set command (check syntax)");
                 return;
             }
             if (boost::starts_with(data, "unset ")) {
@@ -210,10 +225,13 @@ namespace IAPServer
                     //disable jog mode
                     ret = board->send_command("1IR", message.msg);
                     if(ret < 0)
-                        prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
+                        prepare_tcp_err_message(
+                            board->get_err_string(static_cast<pm381_err_t>(-ret), message.msg));
+                    else
+                        prepare_tcp_success_message();
                 }
                 else
-                    prepare_tcp_message("invalid unset command (check syntax)");
+                    prepare_tcp_err_message("invalid unset command (check syntax)");
                 return;
             }
 
@@ -231,7 +249,8 @@ namespace IAPServer
 
                         //check that the entered axis descriptor is valid
                         if(string_id_map.find(it->first) == string_id_map.end()) {
-                            prepare_tcp_message("entered position has an invalid axis descriptor");
+                            prepare_tcp_err_message(
+                                "entered position has an invalid axis descriptor");
                             return;
                         }
 
@@ -239,28 +258,29 @@ namespace IAPServer
                     }
 
                     if(mypos.size() == 0) {
-                        prepare_tcp_message("entered position is not valid");
+                        prepare_tcp_err_message("entered position is not valid");
                         return;
                     }
 
-                    cout << "MYPOS: ";
+                    cout << "requested new position: ";
                     for(Position::coord_type::const_iterator it = mypos.begin(); it != mypos.end(); ++it)
                         cout << it->first << ": " << it->second << " ";
                     cout << endl;
 
-		    int ret;
+                    int ret;
                     if(data[1] == 'a') // absolute move
                         ret = board->move_to(mypos);
                     else // data[1] = 'r'  -> relative move
                         ret = board->move_rel(mypos);
 
-		    if(ret < 0)
-	                    prepare_tcp_message("Controller Error");
-		    else 
-	                    prepare_tcp_message("Success");
+                    if(ret < 0)
+                        // todo use better error message
+                        prepare_tcp_err_message("Controller Error");
+                    else
+                        prepare_tcp_success_message();
                 }
                 else
-                    prepare_tcp_message("parse_multiplett_failure");
+                    prepare_tcp_err_message("parse_multiplett_failure");
 
                 return;
             }
@@ -271,11 +291,12 @@ namespace IAPServer
             if(boost::regex_match(data, what, e2, boost::match_extra)) {
                 ret = board->send_command(data,message.msg);
                 if(ret < 0)
-                    prepare_tcp_err_message(board->get_err_string(static_cast<pm381_err_t>(-ret)));
+                    prepare_tcp_err_message(
+                        board->get_err_string(static_cast<pm381_err_t>(-ret), message.msg));
                 return;
             }
             else
-                prepare_tcp_message("invalid command (check syntax)");
+                prepare_tcp_err_message("invalid command (check syntax)");
         }
     }
 }

@@ -37,7 +37,7 @@ typedef enum{
     E_LAST
 } pm381_err_t;
 
-static const char* pm381_err_string[E_LAST] = {
+static const std::string pm381_err_string[E_LAST] = {
     "this should't be printed - probably a bug in this software",
     "PM381 returned error message",
     "size of reply from stepper card was too short",
@@ -180,9 +180,11 @@ public:
     void SaveEnvironment() const;
     void RestoreEnvironment() const;
 
-    const char *get_err_string(pm381_err_t type) {
+    std::string get_err_string(pm381_err_t type, char* error_msg=NULL) {
         if(type >= E_LAST || type < 0)
-            return "BUG: error string not valid";
+            return std::string("BUG: error string not valid");
+        else if (type == E_PM381_ERROR_MSG && error_msg)
+            return error_msg;
         else
             return pm381_err_string[type]; };
 

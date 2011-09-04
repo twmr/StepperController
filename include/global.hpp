@@ -45,7 +45,8 @@ typedef enum {
     MSG_ERROR,
     MSG_NONE,
     MSG_REQUEST, //command message
-    MSG_REPLY
+    MSG_REPLY,
+    MSG_SUCCESS
 } msg_type_t;
 
 

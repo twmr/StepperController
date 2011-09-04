@@ -165,7 +165,13 @@ int main(int argc, char* argv[])
             boost::asio::write(s, boost::asio::buffer(reinterpret_cast<char*>(&request), msglen));
             boost::asio::read(s, boost::asio::buffer(reinterpret_cast<char*>(&reply), msglen));
 
-            cout << reply.msg << endl;
+            if(reply.type == MSG_ERROR)
+                 cout << "\033[0;31mError: " << reply.msg << "\033[0m" << endl;
+            else if(reply.type == MSG_SUCCESS)
+                cout << "\033[0;32m" << "OK" << "\033[0m" << endl;
+            else
+                cout << reply.msg << endl;
+
         }
 
     } catch (exception& e) {

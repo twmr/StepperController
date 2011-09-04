@@ -53,6 +53,11 @@ namespace helper {
         tokenizer<escaped_list_separator<char> > tok(str);
         for(tokenizer<escaped_list_separator<char> >::iterator beg=tok.begin(); beg!=tok.end();++beg){
             // cout << *beg << "\n";
+            if(!string_contains(*beg,delim)) {
+                cerr << "delimiter missing in string " << *beg << endl;
+                return -1; //not supported
+            }
+
             string var = beg->substr(0, beg->find(delim));
             string value = beg->substr(beg->find(delim)+1);
 
