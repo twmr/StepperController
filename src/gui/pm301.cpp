@@ -51,13 +51,13 @@ IMPLEMENT_CLASS( PM301, wxFrame )
 BEGIN_EVENT_TABLE( PM301, wxFrame )
 
 ////@begin PM301 event table entries
-    EVT_MENU( ID_MENUITEM, PM301::ClickUnitConvConsts )
-
     EVT_MENU( ID_MENUITEM1, PM301::OnMenuitem1Click )
 
     EVT_MENU( ID_MENUITEM2, PM301::OnPositionUpdateClick )
 
     EVT_BUTTON( ID_BUTTON3, PM301::OnButtonZeroPositionClick )
+
+    EVT_BUTTON( ID_BUTTON_SAVEXML, PM301::OnButtonSavexmlClick )
 
     EVT_CHECKBOX( ID_CHECKBOX, PM301::OnCheckboxClick )
 
@@ -194,8 +194,6 @@ void PM301::CreateControls()
 
     wxMenuBar* menuBar = new wxMenuBar;
     wxMenu* itemMenu3 = new wxMenu;
-    itemMenu3->Append(ID_MENUITEM, _("Change Unit-Conversion-Constants"), wxEmptyString, wxITEM_NORMAL);
-    itemMenu3->Enable(ID_MENUITEM, false);
     itemMenu3->Append(ID_MENUITEM1, _("Batch Mode"), wxEmptyString, wxITEM_NORMAL);
     itemMenu3->Append(ID_MENUITEM2, _("Position Update Thread"), wxEmptyString, wxITEM_CHECK);
     menuBar->Append(itemMenu3, _("Operations"));
@@ -207,18 +205,24 @@ void PM301::CreateControls()
     basiccontrol = new wxBoxSizer(wxHORIZONTAL);
     mainswitcher->Add(basiccontrol, 0, wxGROW, 5);
 
-    wxBoxSizer* itemBoxSizer9 = new wxBoxSizer(wxVERTICAL);
-    basiccontrol->Add(itemBoxSizer9, 1, wxALIGN_TOP|wxALL, 5);
+    wxBoxSizer* itemBoxSizer8 = new wxBoxSizer(wxVERTICAL);
+    basiccontrol->Add(itemBoxSizer8, 1, wxALIGN_TOP|wxALL, 5);
 
-    wxStaticBox* itemStaticBoxSizer10Static = new wxStaticBox(itemFrame1, wxID_ANY, _("Set New Stepper Position"));
-    wxStaticBoxSizer* itemStaticBoxSizer10 = new wxStaticBoxSizer(itemStaticBoxSizer10Static, wxVERTICAL);
-    itemBoxSizer9->Add(itemStaticBoxSizer10, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
+    wxStaticBox* itemStaticBoxSizer9Static = new wxStaticBox(itemFrame1, wxID_ANY, _("Set New Stepper Position"));
+    wxStaticBoxSizer* itemStaticBoxSizer9 = new wxStaticBoxSizer(itemStaticBoxSizer9Static, wxVERTICAL);
+    itemBoxSizer8->Add(itemStaticBoxSizer9, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
+
+    wxBoxSizer* itemBoxSizer10 = new wxBoxSizer(wxHORIZONTAL);
+    itemBoxSizer8->Add(itemBoxSizer10, 0, wxGROW|wxALL, 5);
 
     wxButton* itemButton11 = new wxButton( itemFrame1, ID_BUTTON3, _("Set current position as zero position"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer9->Add(itemButton11, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
+    itemBoxSizer10->Add(itemButton11, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxStaticLine* itemStaticLine12 = new wxStaticLine( itemFrame1, wxID_STATIC, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL );
-    basiccontrol->Add(itemStaticLine12, 0, wxGROW, 5);
+    wxButton* itemButton12 = new wxButton( itemFrame1, ID_BUTTON_SAVEXML, _("Save current position to xml file"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemBoxSizer10->Add(itemButton12, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+
+    wxStaticLine* itemStaticLine13 = new wxStaticLine( itemFrame1, wxID_STATIC, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL );
+    basiccontrol->Add(itemStaticLine13, 0, wxGROW, 5);
 
     jogmodelayout = new wxBoxSizer(wxVERTICAL);
     basiccontrol->Add(jogmodelayout, 0, wxGROW|wxALL, 5);
@@ -230,16 +234,16 @@ void PM301::CreateControls()
     batchmodelog = new wxBoxSizer(wxVERTICAL);
     mainswitcher->Add(batchmodelog, 1, wxGROW|wxALL, 5);
 
-    wxBoxSizer* itemBoxSizer16 = new wxBoxSizer(wxHORIZONTAL);
-    batchmodelog->Add(itemBoxSizer16, 0, wxGROW|wxALL, 0);
+    wxBoxSizer* itemBoxSizer17 = new wxBoxSizer(wxHORIZONTAL);
+    batchmodelog->Add(itemBoxSizer17, 0, wxGROW|wxALL, 0);
 
-    itemBoxSizer16->Add(5, 5, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    itemBoxSizer17->Add(5, 5, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxButton* itemButton18 = new wxButton( itemFrame1, ID_BUTTON, _("Load Bach File"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer16->Add(itemButton18, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    wxButton* itemButton19 = new wxButton( itemFrame1, ID_BUTTON, _("Load Bach File"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemBoxSizer17->Add(itemButton19, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    wxButton* itemButton19 = new wxButton( itemFrame1, ID_BUTTON1, _("Quit Batch Mode"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemBoxSizer16->Add(itemButton19, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    wxButton* itemButton20 = new wxButton( itemFrame1, ID_BUTTON1, _("Quit Batch Mode"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemBoxSizer17->Add(itemButton20, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
     batchmodetextctl = new wxTextCtrl( itemFrame1, ID_TEXTCTRL6, _("Batch Log"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE );
     batchmodelog->Add(batchmodetextctl, 1, wxGROW|wxALL, 5);
@@ -248,16 +252,16 @@ void PM301::CreateControls()
     statusbar->SetFieldsCount(1);
     itemFrame1->SetStatusBar(statusbar);
 
-    wxToolBar* itemToolBar22 = CreateToolBar( wxTB_FLAT|wxTB_HORIZONTAL, ID_TOOLBAR );
-    itemToolBar22->Show(false);
-    wxButton* itemButton23 = new wxButton( itemToolBar22, ID_BUTTON2, _("Button"), wxDefaultPosition, wxDefaultSize, 0 );
-    itemToolBar22->AddControl(itemButton23);
-    itemToolBar22->Realize();
-    itemFrame1->SetToolBar(itemToolBar22);
+    wxToolBar* itemToolBar23 = CreateToolBar( wxTB_FLAT|wxTB_HORIZONTAL, ID_TOOLBAR );
+    itemToolBar23->Show(false);
+    wxButton* itemButton24 = new wxButton( itemToolBar23, ID_BUTTON2, _("Button"), wxDefaultPosition, wxDefaultSize, 0 );
+    itemToolBar23->AddControl(itemButton24);
+    itemToolBar23->Realize();
+    itemFrame1->SetToolBar(itemToolBar23);
 
     // Connect events and objects
-    itemButton18->Connect(ID_BUTTON, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LoadBatchFileDialog), NULL, this);
-    itemButton19->Connect(ID_BUTTON1, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LeaveBatchModeButtonPressed), NULL, this);
+    itemButton19->Connect(ID_BUTTON, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LoadBatchFileDialog), NULL, this);
+    itemButton20->Connect(ID_BUTTON1, wxEVT_LEFT_DOWN, wxMouseEventHandler(PM301::LeaveBatchModeButtonPressed), NULL, this);
 ////@end PM301 content construction
 //std::locale::global(locale(setlocale(LC_ALL, NULL)));
 // m_locale.Init(wxLANGUAGE_DEFAULT, wxLOCALE_LOAD_DEFAULT | wxLOCALE_CONV_ENCODING);
@@ -300,7 +304,7 @@ void PM301::CreateControls()
     axesradiobox->Show(false);
     jogmodelayout->Add(axesradiobox, 0, wxGROW, 5);
     //itemStaticBoxSizer10Static->Disable();
-    itemButton11->Disable();
+    //itemButton11->Disable();
     batchmodelog->Show(false);
     mainswitcher->Layout();
 }
@@ -446,6 +450,7 @@ void PM301::initaxes()
 
 Position PM301::getcurpos()
 {
+
     SendMessage("pp");
 #ifdef TEST_NETWORK
     s->Read(reinterpret_cast<char*>(&reply), msglen);
@@ -712,3 +717,14 @@ void PM301::OnBitmapbuttonClick( wxCommandEvent& event )
     std::cout << " bitmap button " << id << " clicked " << std::endl;
     axissc[id]->SetValue(get_cp().GetCoordinate(id+1));
 }
+
+
+/*
+ * wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BUTTON_SAVEXML
+ */
+
+void PM301::OnButtonSavexmlClick( wxCommandEvent& event )
+{
+    SendMessage("savexml");
+}
+

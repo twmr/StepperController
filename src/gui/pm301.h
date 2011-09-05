@@ -51,10 +51,10 @@ class PositionUpdateThread;
 
 ////@begin control identifiers
 #define ID_PM301 10000
-#define ID_MENUITEM 10002
 #define ID_MENUITEM1 10020
 #define ID_MENUITEM2 10021
 #define ID_BUTTON3 10006
+#define ID_BUTTON_SAVEXML 10003
 #define ID_CHECKBOX 10004
 #define ID_BUTTON 10016
 #define ID_BUTTON1 10017
@@ -101,9 +101,6 @@ public:
 
 ////@begin PM301 event handler declarations
 
-    /// wxEVT_COMMAND_MENU_SELECTED event handler for ID_MENUITEM
-    void ClickUnitConvConsts( wxCommandEvent& event );
-
     /// wxEVT_COMMAND_MENU_SELECTED event handler for ID_MENUITEM1
     void OnMenuitem1Click( wxCommandEvent& event );
 
@@ -112,6 +109,9 @@ public:
 
     /// wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BUTTON3
     void OnButtonZeroPositionClick( wxCommandEvent& event );
+
+    /// wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BUTTON_SAVEXML
+    void OnButtonSavexmlClick( wxCommandEvent& event );
 
     /// wxEVT_COMMAND_CHECKBOX_CLICKED event handler for ID_CHECKBOX
     void OnCheckboxClick( wxCommandEvent& event );

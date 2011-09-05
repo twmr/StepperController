@@ -162,7 +162,28 @@ namespace IAPServer
             }
             prepare_tcp_message(os.str());
         }
+        else if (! data.compare("savexml")) {
+            BarePosition bp;
+            board->get_cur_position(bp);
+            map<size_t,string>& id_string_map = board->get_coord_map();
+            ostringstream os;
 
+            os << "saving current pos (bare) of all axes to xml file" << endl;
+            for(BarePosition::coord_type::const_iterator
+                    it = bp.begin(); it != bp.end(); ++it) {
+                os << "\t\'" << id_string_map[it->first] << "\'=" << bp.GetCoordinate(it->first) << endl;
+                board->getConfig().setAxisElement(it->first, "Position", bp.GetCoordinate(it->first));
+                os << "\tul=" << board->getConfig().getAxisElement<int>(it->first,"UpperLimit") << endl;
+                os << "\tll=" << board->getConfig().getAxisElement<int>(it->first,"LowerLimit") << endl;
+                int oldul = board->getConfig().getAxisElement<int>(it->first,"UpperLimit");
+                int oldll = board->getConfig().getAxisElement<int>(it->first,"LowerLimit");
+                // board->getConfig().setAxisElement(it->first, "UpperLimit", oldul);
+                // board->getConfig().setAxisElement(it->first, "LowerLimit", newul);
+            }
+
+            (board->getConfig()).writeconfig();
+            prepare_tcp_message(os.str());
+        }
         else {
             /* all other commads */
 
@@ -309,15 +330,19 @@ void catch_int(int sig)
 
     BarePosition bp;
     board->get_cur_position(bp);
+    map<size_t,string>& id_string_map = board->get_coord_map();
+    ostringstream os;
 
-    cout << "signal_handler:" << endl;
+    os << "signal_handler:" << endl;
+
+    os << "saving current pos (bare) of all axes to xml file" << endl;
     for(BarePosition::coord_type::const_iterator
             it = bp.begin(); it != bp.end(); ++it) {
-        cout << "\tstoring current pos of axis with id " << it->first
-             << " in xml file" << endl;
+        os << "\t\'" << id_string_map[it->first] << "\'=" << bp.GetCoordinate(it->first) << endl;
         board->getConfig().setAxisElement(it->first, "Position", bp.GetCoordinate(it->first));
     }
-
+    
+    cout << os.str();
     (board->getConfig()).writeconfig();
     _exit(1);
 }

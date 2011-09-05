@@ -126,6 +126,28 @@ public:
                       << "not found in property tree" << std::endl;
     };
 
+    template <class T>
+    const T getAxisElement(const size_t axnr, const std::string& element) const {
+        bool found = false;
+        T retval = 0;
+        BOOST_FOREACH(const boost::property_tree::ptree::value_type & v,
+                      params_.get_child("config")) {
+            if(v.first.data() != std::string("axis")) continue;
+
+            size_t id = v.second.get<size_t>("<xmlattr>.id");
+            if( id != axnr )
+                continue;
+
+            found = true;
+            retval = v.second.get<T>(element);
+        }
+
+        if(!found)
+            std::cerr << "WARNING: element (axis: "<< axnr << ") " << element
+                      << "not found in property tree" << std::endl;
+        return retval;
+    };
+
 
 private:
     boost::property_tree::ptree params_;
