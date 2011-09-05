@@ -47,8 +47,8 @@ it according to the Readme file!
 MOVES:
 ---------
 
-to compile the core program and the GUI (if the wxWidgets devel files
-are installed) for MOVES create a build directory
+to compile the core program and the GUI (if wxWidgets devel files are
+installed) for MOVES create a build directory
 
     mkdir build && cd build
 
