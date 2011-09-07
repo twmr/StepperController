@@ -50,19 +50,20 @@ namespace IAPServer
         "HELP:\n"
         "available commands are:\n"
         "quit          : quit the client\n" //implemented in the client
-        "close         : stop the current session\n"
-        "serialtest    : test rs232 communication\n"
-        "\n"
+        // "close         : stop the current session\n"
+        // "serialtest    : test rs232 communication\n"
+        // "\n"
         "sleep N       : sleep N seconds\n" //implemented in the client
-        "set axis N    : setaxis where N is the axisnumber [1-3]\n"
+        "set axis N    : setaxis where N is the axis ID\n"
         "set/unset jog : enable or disable jog mode\n"
-        "mr a,b,c      : move relative a,b,c are real numbers\n"
-        "ma a,b,c      : move absolute a,b,c are real numbers\n"
+        "mr x=1.0,y=2.0      : move relative a,b,c are real numbers\n"
+        "ma y=-3.0     : move absolute a,b,c are real numbers\n"
         //"printconvconsts       : print the conversion constants\n"
         //"set convconsts a,b,c  : setthe conversion constants\n"
-        "set zero      : set the current position to zero\n"
+        "set zero      : set the current position (units:steps) to zero and update the xml file accordingly\n"
+        "savexml       : save the current position to the parameters.xml file\n"
         "pp            : print positions of all motors in user defined units\n"
-        "pbp           : print bare positions of all motors (stepperboard units)"
+        "pbp           : print bare positions of all motors (stepperboard units)\n"
         "psl           : print soft limits (user defined units)"
 
     };

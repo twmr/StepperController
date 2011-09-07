@@ -20,7 +20,6 @@
 ////@begin includes
 #include "wx/frame.h"
 #include "wx/statline.h"
-#include "wx/statusbr.h"
 #include "wx/toolbar.h"
 ////@end includes
 
@@ -40,7 +39,6 @@
 
 ////@begin forward declarations
 class wxBoxSizer;
-class wxStatusBar;
 ////@end forward declarations
 class PositionUpdateThread;
 
@@ -51,14 +49,12 @@ class PositionUpdateThread;
 ////@begin control identifiers
 #define ID_PM301 10000
 #define ID_MENUITEM1 10020
-#define ID_MENUITEM2 10021
 #define ID_BUTTON3 10006
 #define ID_BUTTON_SAVEXML 10003
 #define ID_CHECKBOX 10004
 #define ID_BUTTON 10016
 #define ID_BUTTON1 10017
 #define ID_TEXTCTRL6 10015
-#define ID_STATUSBAR 10001
 #define ID_TOOLBAR 10018
 #define ID_BUTTON2 10019
 #define SYMBOL_PM301_STYLE wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxCLOSE_BOX
@@ -103,9 +99,6 @@ public:
     /// wxEVT_COMMAND_MENU_SELECTED event handler for ID_MENUITEM1
     void OnMenuitem1Click( wxCommandEvent& event );
 
-    /// wxEVT_COMMAND_MENU_SELECTED event handler for ID_MENUITEM2
-    void OnPositionUpdateClick( wxCommandEvent& event );
-
     /// wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BUTTON3
     void OnButtonZeroPositionClick( wxCommandEvent& event );
 
@@ -120,9 +113,6 @@ public:
 
     /// wxEVT_LEFT_DOWN event handler for ID_BUTTON1
     void LeaveBatchModeButtonPressed( wxMouseEvent& event );
-
-    /// wxEVT_UPDATE_UI event handler for ID_STATUSBAR
-    void OnStatusbarUpdate( wxUpdateUIEvent& event );
 
 ////@end PM301 event handler declarations
 
@@ -146,7 +136,6 @@ public:
     void SendMessage(const std::string&);
     void SendMessage(const char *);
     void send();
-    void check_and_update_position(wxSpinCtrlDouble*, wxString& , const double);
     void ToggleBatchMode(void);
 
     /// Should we show tooltips?
@@ -155,11 +144,12 @@ public:
 ////@begin PM301 member variables
     wxBoxSizer* mainswitcher;
     wxBoxSizer* basiccontrol;
+    wxStaticBox* poswidget;
+    wxStaticBoxSizer* posSizer;
     wxBoxSizer* jogmodelayout;
     wxCheckBox* checkjog;
     wxBoxSizer* batchmodelog;
     wxTextCtrl* batchmodetextctl;
-    wxStatusBar* statusbar;
 ////@end PM301 member variables
 
     wxVector<wxSpinCtrlDouble*> axissc;
@@ -231,8 +221,7 @@ public:
         pm301(p)
         {};
     virtual void *Entry();
-    void WriteText(const wxString& text, const Position &cp, const size_t n) const;
-
+    
 private:
     PM301 *pm301;
 };
