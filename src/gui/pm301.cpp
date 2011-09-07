@@ -71,6 +71,9 @@ BEGIN_EVENT_TABLE( PM301, wxFrame )
 
 END_EVENT_TABLE()
 
+static wxMutex *s_mutex;
+
+
 /*
  * PM301 constructors
  */
@@ -139,11 +142,15 @@ void PM301::Init()
     addr.Service(16000);
 
     s = new wxSocketClient();
+    //s->SetFlags(wxSOCKET_WAITALL);
+			    
 
-    s->SetEventHandler(*this, SOCKET_ID);
-    s->SetNotify(wxSOCKET_INPUT_FLAG|wxSOCKET_LOST_FLAG);
+    //s->SetEventHandler(*this, SOCKET_ID);
+    //s->SetNotify(wxSOCKET_INPUT_FLAG|wxSOCKET_LOST_FLAG);
 
-    s->Notify(true);
+    //s->Notify(true);
+
+    // FIXME SetFlags WaitALL ?????????
 
     //Block the GUI
     if(s->Connect(addr, true))
@@ -275,22 +282,22 @@ void PM301::CreateControls()
 
     for(size_t i=0; i < get_nraxes(); ++i) {
         axisbs.push_back(new wxBoxSizer(wxHORIZONTAL));
-        axisst.push_back(new wxStaticText(itemStaticBoxSizer10->GetStaticBox(), -1,
+        axisst.push_back(new wxStaticText(itemStaticBoxSizer9->GetStaticBox(), -1,
                                           wxString::Format("%s [%s]:", *coords[i], *units[i]),
                                           wxDefaultPosition, wxDefaultSize, 0));
-        axissc.push_back(new wxSpinCtrlDouble(itemStaticBoxSizer10->GetStaticBox(), ID_SPINCTRLS+i, _T("0"),
+        axissc.push_back(new wxSpinCtrlDouble(itemStaticBoxSizer9->GetStaticBox(), ID_SPINCTRLS+i, _T("0"),
                                               wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -5000, 5000, 0));
-        axisbb.push_back(new wxBitmapButton(itemStaticBoxSizer10->GetStaticBox(), ID_BITMAPBUTTONS+i,
+        axisbb.push_back(new wxBitmapButton(itemStaticBoxSizer9->GetStaticBox(), ID_BITMAPBUTTONS+i,
                                             wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW));
 
         axissc[i]->SetValue(initpos.GetCoordinate(i+1));
-        axissc[i]->SetDigits(2);
+        axissc[i]->SetDigits(5);
         axissc[i]->SetIncrement(0.01);
 
         axisbs[i]->Add(axisst[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
         axisbs[i]->Add(axissc[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
         axisbs[i]->Add(axisbb[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-        itemStaticBoxSizer10->Add(axisbs[i], 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
+        itemStaticBoxSizer9->Add(axisbs[i], 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
 
         axissc[i]->Bind(wxEVT_COMMAND_SPINCTRLDOUBLE_UPDATED, &PM301::OnSpinCTRLUpdated, this);
         axisbb[i]->Bind(wxEVT_COMMAND_BUTTON_CLICKED, &PM301::OnBitmapbuttonClick, this);
@@ -352,12 +359,33 @@ void PM301::send(void)
 }
 
 
+const wxString PM301::SendandReceive(const wxString& msgstr)
+{
+  msg_t msg;
+  msg.type = MSG_REQUEST;
+  strcpy(msg.msg, msgstr.mb_str());
+  wxMutexLocker lock(m_tcpmutex);
+#ifdef TEST_NETWORK
+  s->Write(reinterpret_cast<char*>(&msg), msglen);
+  std::cout << "msg sent" << std::endl;
+  s->Read(reinterpret_cast<char*>(&msg), msglen);
+  std::cout << "msg recv" << std::endl;
+#endif
+  if(msg.type == MSG_SUCCESS)
+    return wxString("OK");
+  else
+    return wxString(msg.msg);
+}
+
+
 void PM301::SendMessage(const wxString& msgstr)
 {
     request.type = MSG_REQUEST;
-    strcpy(request.msg, msgstr.mb_str());
-    send();
+  strcpy(request.msg, msgstr.mb_str());
+  send();
+  s->Read(reinterpret_cast<char*>(&reply), msglen);
 }
+
 
 void PM301::SendMessage(const std::string& msgstr)
 {
@@ -380,10 +408,11 @@ void PM301::SendMessage(const char *msgstr)
 
 void PM301::OnRadioboxSelected( wxCommandEvent& event )
 {
-    char buf[4];
     int selected = axesradiobox->GetSelection();
-    sprintf(buf,"sa%d",selected+1);
-    SendMessage(buf);
+    wxString text;
+    text.Printf("sa%d", selected+1);
+    std::cout << "Radiobox selection : " << text.c_str() << " ret: " << 
+      SendandReceive(text).c_str() << std::endl;
 }
 
 
@@ -391,8 +420,10 @@ void PM301::check_and_update_position(wxSpinCtrlDouble* ctrl, wxString& axdesc, 
 {
     wxString text;
     text.Printf("ma %s=%f", axdesc, curval);
-    std::cout << "command to update pos: " << text.c_str() << std::endl;
-    SendMessage(text);
+    std::cout << "command to update pos: " << text.c_str();
+    text = SendandReceive(text);
+    std::cout  << " it returned: " << text.c_str() << std::endl;
+
 }
 
 
@@ -403,13 +434,15 @@ void PM301::check_and_update_position(wxSpinCtrlDouble* ctrl, wxString& axdesc, 
 void PM301::OnCheckboxClick( wxCommandEvent& event )
 {
     if(checkjog->IsChecked()) {
-        SendMessage("set jog");
+        wxString txt = SendandReceive("set jog");
+	std::cout << "checkboxclick sj returned " << txt.c_str() << std::endl;
         axesradiobox->Show(true);
-        SendMessage("sa1");
-
+        txt = SendandReceive("sa1");
+	std::cout << "checkboxclick sa1 returned " << txt.c_str() << std::endl;
     } else
     {
-        SendMessage("unset jog");
+        wxString txt = SendandReceive("unset jog");
+	std::cout << "checkboxclick usj returned " << txt.c_str() << std::endl;
         axesradiobox->Show(false);
     }
 
@@ -418,10 +451,9 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
 
 void PM301::initaxes()
 {
-    SendMessage("ga"); //get axes
+   
 #ifdef TEST_NETWORK
-    s->Read(reinterpret_cast<char*>(&reply), msglen);
-    wxString text(reply.msg,wxConvUTF8);
+    wxString text = SendandReceive("ga");
 #else
     wxString text;
 
@@ -450,11 +482,8 @@ void PM301::initaxes()
 
 Position PM301::getcurpos()
 {
-
-    SendMessage("pp");
 #ifdef TEST_NETWORK
-    s->Read(reinterpret_cast<char*>(&reply), msglen);
-    wxString text(reply.msg,wxConvUTF8);
+    wxString text = SendandReceive("pp");
 #else
     static double pos[]={3.21,91.19,324.19,-1239.09, 9234,93,-0.2};
     wxString text;
@@ -512,16 +541,6 @@ void PM301::ToggleBatchMode(void)
     mainswitcher->Layout();
 
 }
-
-/*
- * wxEVT_COMMAND_MENU_SELECTED event handler for ID_MENUITEM
- */
-
-void PM301::ClickUnitConvConsts( wxCommandEvent& event )
-{
-    ToggleBatchMode();
-}
-
 
 /*
  * wxEVT_LEFT_DOWN event handler for ID_BUTTON1
@@ -618,6 +637,7 @@ void* PositionUpdateThread::Entry()
             text.Append(wxString::Format("%s: %.4f %s\t", *pm301->coords[i], cp.GetCoordinate(i+1), *pm301->units[i]));
         }
         WriteText(text,cp, 0);
+	std::cout << "PosThread: " << text.c_str() << std::endl;
         wxThread::Sleep(850);
     }
     return NULL;
@@ -671,7 +691,7 @@ void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
         for (wxVector<wxSpinCtrlDouble*>::iterator it = axissc.begin(); it != axissc.end(); ++it)
             (*it)->SetValue(0.0);
         //}
-        SendMessage("set zero");
+        SendandReceive("set zero");
         break;
     case wxID_NO:
         //wxLogError(wxT("no"));
@@ -725,6 +745,6 @@ void PM301::OnBitmapbuttonClick( wxCommandEvent& event )
 
 void PM301::OnButtonSavexmlClick( wxCommandEvent& event )
 {
-    SendMessage("savexml");
+    SendandReceive("savexml");
 }
 

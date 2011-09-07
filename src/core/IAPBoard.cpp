@@ -513,6 +513,29 @@ void IAPBoard::get_cur_position(Position& retpos) const
     conv2postion(retpos, bp);
 }
 
+void IAPBoard::get_upper_softlimits(Position& retsl) const
+{
+
+  //const std::map<size_t,std::string>& id_string_map = get_coord_map();
+  for(const_axesiter it = axes.begin(); it != axes.end(); ++it) {
+    retsl.SetCoordinate(it->get_id(),
+		    getConfig().getAxisElement<int>(it->get_id(),"UpperLimit")*it->get_factor()
+		    );
+  }
+
+}
+
+void IAPBoard::get_lower_softlimits(Position& retsl) const
+{
+  //const std::map<size_t,std::string>& id_string_map = get_coord_map();
+  for(const_axesiter it = axes.begin(); it != axes.end(); ++it) {
+    retsl.SetCoordinate(it->get_id(),
+		    getConfig().getAxisElement<int>(it->get_id(),"LowerLimit")*it->get_factor()
+		    );
+  }
+}
+
+
 
 void IAPBoard::test(char *msg)
 {

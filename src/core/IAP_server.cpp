@@ -63,6 +63,7 @@ namespace IAPServer
         "set zero      : set the current position to zero\n"
         "pp            : print positions of all motors in user defined units\n"
         "pbp           : print bare positions of all motors (stepperboard units)"
+        "psl           : print soft limits (user defined units)"
 
     };
 
@@ -175,13 +176,43 @@ namespace IAPServer
                 board->getConfig().setAxisElement(it->first, "Position", bp.GetCoordinate(it->first));
                 os << "\tul=" << board->getConfig().getAxisElement<int>(it->first,"UpperLimit") << endl;
                 os << "\tll=" << board->getConfig().getAxisElement<int>(it->first,"LowerLimit") << endl;
-                int oldul = board->getConfig().getAxisElement<int>(it->first,"UpperLimit");
-                int oldll = board->getConfig().getAxisElement<int>(it->first,"LowerLimit");
+                //int oldul = board->getConfig().getAxisElement<int>(it->first,"UpperLimit");
+                //int oldll = board->getConfig().getAxisElement<int>(it->first,"LowerLimit");
                 // board->getConfig().setAxisElement(it->first, "UpperLimit", oldul);
                 // board->getConfig().setAxisElement(it->first, "LowerLimit", newul);
             }
 
             (board->getConfig()).writeconfig();
+            prepare_tcp_message(os.str());
+        }
+        else if (! data.compare("psl")) {
+	    //print soft limits
+            Position lsl = board->createPosition();
+	    Position usl = board->createPosition();
+
+            board->get_lower_softlimits(lsl);
+            board->get_upper_softlimits(usl);
+
+	    map<size_t,string>& id_string_map = board->get_coord_map();
+	    map<size_t,string>& id_unit_map = board->get_unit_map(); 
+	    ostringstream os;
+
+            os << "upper softlimits:" << endl;
+            usl.GetPositionString(message.msg, id_string_map, id_unit_map);
+	    os << message.msg;
+            // for(Position::coord_type::const_iterator
+	    // 	  it = usl.begin(); it != usl.end(); ++it) {
+	    //   os << "\t\'" << id_string_map[it->first] << "\'=" << usl.GetCoordinate(it->first) << endl;
+            // }
+
+            os << "\nlower softlimits:" << endl;
+            lsl.GetPositionString(message.msg, id_string_map, id_unit_map);
+	    os << message.msg;
+	    // for(Position::coord_type::const_iterator
+	    // 	  it = lsl.begin(); it != lsl.end(); ++it) {
+	    //   os << "\t\'" << id_string_map[it->first] << "\'=" << lsl.GetCoordinate(it->first) << endl;
+            // }
+
             prepare_tcp_message(os.str());
         }
         else {

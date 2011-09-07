@@ -180,6 +180,9 @@ public:
     void get_cur_position(BarePosition& retbarepos) const;
     void get_cur_position(Position& retpos) const;
 
+    void get_upper_softlimits(Position& retsl) const;
+    void get_lower_softlimits(Position& retsl) const;
+
     IAPconfig& getConfig() const { return config_; };
 
     bool is_connected() { return connected; };
@@ -213,6 +216,14 @@ public:
     typedef std::vector<Axis>::iterator axesiter;
     typedef std::vector<Axis>::const_iterator const_axesiter;
 
+    // const std::map<size_t, std::string>& get_coord_map() const
+    //     { return coordinate_map; };
+
+    // const std::map<size_t, std::string>& get_unit_map() const
+    //     { return unit_map; };
+
+    // const std::map<std::string, size_t>& get_inv_coord_map() const
+    //     { return inv_coordinate_map; };
     std::map<size_t, std::string>& get_coord_map()
         { return coordinate_map; };
 

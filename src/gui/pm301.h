@@ -42,7 +42,6 @@
 class wxBoxSizer;
 class wxStatusBar;
 ////@end forward declarations
-class UnitConversionConstants;
 class PositionUpdateThread;
 
 /*!
@@ -171,6 +170,7 @@ public:
 
     Position getcurpos();
     void initaxes();
+    const wxString SendandReceive(const wxString& msgstr);
     
     //protect critical data with mutexs
     Position get_cp() const {
@@ -202,9 +202,9 @@ private:
     wxSocketClient* s;
     msg_t request, reply;
     PositionUpdateThread *posthread;
-    UnitConversionConstants *uconvframe;
     Position cp_;
     mutable wxMutex m_mutex;
+    mutable wxMutex m_tcpmutex;
     size_t nraxes;
 };
 
