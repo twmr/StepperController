@@ -489,10 +489,12 @@ Position PM301::getcurpos()
 #else
     static double pos[]={3.21,91.19,324.19,-1239.09, 9234,93,-0.2};
     wxString text;
+    std::cout << "GUI_position_parser: nraxis " << get_nraxes() << std::endl;
     for(size_t i=0; i < get_nraxes(); ++i) {
-        text.Append(wxString::Format(" axis%d: %lf\n", i+1, pos[i]));
+        text.Append(wxString::Format(" axis%u: %f\n", (unsigned int)i+1, pos[i]));
         pos[i] += 0.9;
     }
+    std::cout << "GUI_position_parser: pos-string:\n" << text.c_str() << std::endl;
 #endif
 
     wxVector<Position::type> vec;
