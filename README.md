@@ -120,6 +120,15 @@ x:
 y:
 ....
 
+Debugging the software( without hardware):
+-----------------------------
+
+ If you want to test the GUI without launching a server, you have to
+ undefine the TEST_NETWORK macro in src/gui/pm301.cpp like this
+
+     #undef TEST_NETWORK
+
+
 TODO:
 -----
 * implement wait command
