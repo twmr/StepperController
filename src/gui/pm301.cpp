@@ -29,8 +29,6 @@
 #include "wx/socket.h"
 #include "pm301.h"
 
-//#include "sample.xpm"
-
 ////@begin XPM images
 ////@end XPM images
 
@@ -61,13 +59,71 @@ BEGIN_EVENT_TABLE( PM301, wxFrame )
 
 ////@end PM301 event table entries
 
-    EVT_SOCKET(SOCKET_ID, PM301::OnSocketEvent )
-    
+    // EVT_SOCKET(SOCKET_ID, PM301::OnSocketEvent )
+
     EVT_RADIOBOX( ID_AXESRADIOBOX, PM301::OnRadioboxSelected )
 
 END_EVENT_TABLE()
 
-static wxMutex *s_mutex;
+//----------------------------------------------------------------------------
+// ComTextCtrl
+//----------------------------------------------------------------------------
+
+BEGIN_EVENT_TABLE( ComTextCtrl, wxTextCtrl )
+END_EVENT_TABLE( )
+
+//----------------------------------------------------------------------------
+// PosTextCtrl
+//----------------------------------------------------------------------------
+
+BEGIN_EVENT_TABLE( PosCtrl, wxTextCtrl )
+END_EVENT_TABLE( )
+
+PosCtrl::PosCtrl( wxWindow* parent, wxWindowID id, const wxString& value,
+                  const wxPoint& pos, const wxSize& size, long style, const wxValidator& validator,
+                  const wxString& name ) :
+              ComTextCtrl( parent, id, value, pos, size, style, validator , name )
+{
+  // initialize dummy_value since content of dummy_value is transfered to TextCtrl
+  dummy_value = value;
+
+  // set validator - only numeric input is allowed
+  // the next line crashes so we use the workaround below
+  //wxStringList IncludeList( "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+  //                          "+", "-", "e", "." );
+  // set validator - only numeric input is allowed
+  // the next line crashes so we use the workaround below
+  //wxStringList IncludeList( "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+  //                          "+", "-", "e", "." );
+  wxArrayString Includes;
+  for(size_t i=0; i < 10; i++){
+      Includes.Add(wxString::Format("%d",i));
+  }
+
+  Includes.Add("+");
+  Includes.Add("-");
+  Includes.Add("e");
+  Includes.Add(".");
+
+  wxTextValidator Validator( wxFILTER_INCLUDE_CHAR_LIST , &dummy_value );
+  Validator.SetIncludes( Includes );
+  this->SetValidator( Validator );
+}
+
+void PosCtrl::SetDoubleValue( double value )
+{
+    ComTextCtrl::SetValue( wxString::Format("%.04f",value) );
+}
+
+double PosCtrl::GetDoubleValue() const
+{
+    wxString text = ComTextCtrl::GetValue();
+    double retval;
+    text.ToDouble(&retval);
+    return retval;
+}
+
+
 
 
 /*
@@ -80,7 +136,7 @@ PM301::PM301()
 }
 
 PM301::PM301( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style ) :
-   m_mutex()
+    m_mutex()
 {
     Init();
     Create( parent, id, caption, pos, size, style );
@@ -140,7 +196,7 @@ void PM301::Init()
 
     s = new wxSocketClient();
     //s->SetFlags(wxSOCKET_WAITALL);
-			    
+
 
     //s->SetEventHandler(*this, SOCKET_ID);
     //s->SetNotify(wxSOCKET_INPUT_FLAG|wxSOCKET_LOST_FLAG);
@@ -159,32 +215,33 @@ void PM301::Init()
 #endif
 }
 
-void PM301::OnSocketEvent(wxSocketEvent& event)
-{
-    wxSocketBase* sock = event.GetSocket();
+// //this is not used anymore
+// void PM301::OnSocketEvent(wxSocketEvent& event)
+// {
+//     wxSocketBase* sock = event.GetSocket();
 
-    switch(event.GetSocketEvent())
-    {
-    case wxSOCKET_INPUT:
-        sock->Read(reinterpret_cast<char*>(&reply), msglen);
+//     switch(event.GetSocketEvent())
+//     {
+//     case wxSOCKET_INPUT:
+//         sock->Read(reinterpret_cast<char*>(&reply), msglen);
 
-        if(reply.type == MSG_ERROR) {
-            std::cout << "error event received" << std::endl;
-            wxString errormsg;
-            errormsg.Printf(wxT("Controller ERROR: %s"), reply.msg);
-            wxMessageBox(errormsg, wxT("Warning"),
-                         wxOK | wxICON_INFORMATION, this);
-        }
+//         if(reply.type == MSG_ERROR) {
+//             std::cout << "error event received" << std::endl;
+//             wxString errormsg;
+//             errormsg.Printf(wxT("Controller ERROR: %s"), reply.msg);
+//             wxMessageBox(errormsg, wxT("Warning"),
+//                          wxOK | wxICON_INFORMATION, this);
+//         }
 
-        break;
-    case wxSOCKET_LOST:
-    default:
-        std::cerr << "lost network connection to server" << std::endl;
-        sock->Destroy();
-        break;
+//         break;
+//     case wxSOCKET_LOST:
+//     default:
+//         std::cerr << "lost network connection to server" << std::endl;
+//         sock->Destroy();
+//         break;
 
-    }
-}
+//     }
+// }
 
 
 /*
@@ -277,21 +334,23 @@ void PM301::CreateControls()
         axisst.push_back(new wxStaticText(posSizer->GetStaticBox(), -1,
                                           wxString::Format("%s [%s]:", *coords[i], *units[i]),
                                           wxDefaultPosition, wxDefaultSize, 0));
-        axissc.push_back(new wxSpinCtrlDouble(posSizer->GetStaticBox(), ID_SPINCTRLS+i, _T("0"),
-                                              wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -5000, 5000, 0));
+        axissc.push_back(new PosCtrl(posSizer->GetStaticBox(), ID_SPINCTRLS+i, _T("0"),
+                                     wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER));
+
         //axisbb.push_back(new wxBitmapButton(posSizer->GetStaticBox(), ID_BITMAPBUTTONS+i,
         //                                    wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW));
 
-        axissc[i]->SetValue(initpos.GetCoordinate(i+1));
-        axissc[i]->SetDigits(2);
-        axissc[i]->SetIncrement(0.1);
+        axissc[i]->SetDoubleValue(initpos.GetCoordinate(i+1));
+        //TMP
+        //axissc[i]->SetDigits(4);
+        //axissc[i]->SetIncrement(0.1);
 
         axisbs[i]->Add(axisst[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
         axisbs[i]->Add(axissc[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
         //axisbs[i]->Add(axisbb[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
         posSizer->Add(axisbs[i], 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
 
-        axissc[i]->Bind(wxEVT_COMMAND_SPINCTRLDOUBLE_UPDATED, &PM301::OnSpinCTRLUpdated, this);
+        axissc[i]->Bind(wxEVT_COMMAND_TEXT_ENTER, &PM301::OnPosCTRLUpdated, this);
         //axisbb[i]->Bind(wxEVT_COMMAND_BUTTON_CLICKED, &PM301::OnBitmapbuttonClick, this);
 
         axesradioboxStrings.Add(wxString::Format("&%s",*coords[i]));
@@ -343,37 +402,37 @@ wxIcon PM301::GetIconResource( const wxString& name )
 
 void PM301::send(void)
 {
+    wxMutexLocker lock(m_tcpmutex);
 #ifdef TEST_NETWORK
-    s->Write(reinterpret_cast<char*>(&request), msglen);
+    s->Write(reinterpret_cast<void*>(&request), msglen);
 #endif
 }
 
 
 const wxString PM301::SendandReceive(const wxString& msgstr)
 {
-  msg_t msg;
-  msg.type = MSG_REQUEST;
-  strcpy(msg.msg, msgstr.mb_str());
-  wxMutexLocker lock(m_tcpmutex);
+    wxMutexLocker lock(m_tcpmutex);
+    msg_t msg;
+    msg.type = MSG_REQUEST;
+    strcpy(msg.msg, msgstr.mb_str());
 #ifdef TEST_NETWORK
-  s->Write(reinterpret_cast<char*>(&msg), msglen);
-  std::cout << "msg sent" << std::endl;
-  s->Read(reinterpret_cast<char*>(&msg), msglen);
-  std::cout << "msg recv" << std::endl;
+    s->Write(reinterpret_cast<void*>(&msg), msglen);
+    //std::cout << "msg sent" << std::endl;
+    s->Read(reinterpret_cast<void*>(&msg), msglen);
+    //std::cout << "msg recv" << std::endl;
 #endif
-  if(msg.type == MSG_SUCCESS)
-    return wxString("OK");
-  else
-    return wxString(msg.msg);
+    if(msg.type == MSG_SUCCESS)
+        return wxString("OK");
+    else
+        return wxString(msg.msg);
 }
-
 
 void PM301::SendMessage(const wxString& msgstr)
 {
     request.type = MSG_REQUEST;
-  strcpy(request.msg, msgstr.mb_str());
-  send();
-  s->Read(reinterpret_cast<char*>(&reply), msglen);
+    strcpy(request.msg, msgstr.mb_str());
+    send();
+    s->Read(reinterpret_cast<void*>(&reply), msglen);
 }
 
 
@@ -401,8 +460,8 @@ void PM301::OnRadioboxSelected( wxCommandEvent& event )
     int selected = axesradiobox->GetSelection();
     wxString text;
     text.Printf("sa%d", selected+1);
-    std::cout << "Radiobox selection : " << text.c_str() << " ret: " << 
-      SendandReceive(text).c_str() << std::endl;
+    std::cout << "Radiobox selection : " << text.c_str() << " ret: " <<
+        SendandReceive(text).c_str() << std::endl;
 }
 
 
@@ -418,7 +477,12 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
         axesradiobox->Show(true);
         txt = SendandReceive("sa1");
         std::cout << "checkboxclick sa1 returned " << txt.c_str() << std::endl;
-        
+
+        if(posthread) {
+            wxLogError(wxT("ERROR: thread is already running ?!?!?!"));
+            return;
+        }
+
         posthread = new PositionUpdateThread(this);
         if(posthread->Create() != wxTHREAD_NO_ERROR )
         {
@@ -430,7 +494,7 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
             }
         }
         for(size_t i=0; i < get_nraxes(); ++i) {
-            axissc[i]->SetValue(0.002); //initpos.GetCoordinate(i+1));
+            axissc[i]->SetDoubleValue(initpos.GetCoordinate(i+1));
             axissc[i]->Enable(false);
         }
     } else
@@ -438,11 +502,11 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
         wxString txt = SendandReceive("unset jog");
         std::cout << "checkboxclick usj returned " << txt.c_str() << std::endl;
         axesradiobox->Show(false);
-         if (posthread->Delete() != wxTHREAD_NO_ERROR )
+        if (posthread->Delete() != wxTHREAD_NO_ERROR )
             wxLogError(wxT("Can't delete the thread!"));
         else
             posthread = NULL;
-            
+
         for(size_t i=0; i < get_nraxes(); ++i) {
             axissc[i]->Enable(true);
         }
@@ -453,7 +517,7 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
 
 void PM301::initaxes()
 {
-   
+
 #ifdef TEST_NETWORK
     wxString text = SendandReceive("ga");
 #else
@@ -489,12 +553,16 @@ Position PM301::getcurpos()
 #else
     static double pos[]={3.21,91.19,324.19,-1239.09, 9234,93,-0.2};
     wxString text;
-    std::cout << "GUI_position_parser: nraxis " << get_nraxes() << std::endl;
+    std::cout << "GUI_position_parser: nraxis "
+              << get_nraxes() << std::endl;
+
     for(size_t i=0; i < get_nraxes(); ++i) {
-        text.Append(wxString::Format(" axis%u: %f\n", (unsigned int)i+1, pos[i]));
+        text.Append(wxString::Format(" axis%u: %f\n",
+                                     (unsigned int)i+1, pos[i]));
         pos[i] += 0.9;
     }
-    std::cout << "GUI_position_parser: pos-string:\n" << text.c_str() << std::endl;
+    std::cout << "GUI_position_parser: pos-string:\n"
+              << text.c_str() << std::endl;
 #endif
 
     wxVector<Position::type> vec;
@@ -506,11 +574,9 @@ Position PM301::getcurpos()
         wxString axdesc  = token.BeforeFirst(':');
         double vtmp;
         token.AfterFirst(':').ToDouble(&vtmp);
-        //v = floorf(vtmp*100 + 0.5)/100;
         v = vtmp;
-
-        // std::cout << "GUI_position_parser: " << axdesc.c_str()
-        //           << " " << v << std::endl;
+        std::cout << "GUI_position_parser: " << axdesc.c_str()
+                  << " " << v << std::endl;
         vec.push_back( v );
     }
 
@@ -579,7 +645,9 @@ void *BatchThread::Entry()
 {
     for(size_t i = 0; i < file.GetLineCount(); i++)
     {
+        wxMutexGuiEnter();
         batchmodetextctl_->AppendText(file[i] + _T("\n"));
+        wxMutexGuiLeave();
         if(file[i].length() > 5 && !file[i].substr(0,5).compare(_T("sleep"))) {
             wxString tmp(file[i].substr(6));
             sleep(wxAtoi(tmp));
@@ -587,7 +655,9 @@ void *BatchThread::Entry()
 
         pm301->SendMessage(file[i]);
     }
+    wxMutexGuiEnter();
     batchmodetextctl_->AppendText(_T("Finished executing batch file"));
+    wxMutexGuiLeave();
 
     return NULL;
 }
@@ -605,14 +675,22 @@ void* PositionUpdateThread::Entry()
         //TODO only output BarePosition to statusbar
         // or ???
         text.Printf(wxT("Position:"));
+
+        //must be called in any thread which is not the gui main thread
+        wxMutexGuiEnter();
+
         for(size_t i = 0; i < pm301->get_nraxes(); ++i) {
-            text.Append(wxString::Format("%s: %.4f %s\t", *pm301->coords[i], cp.GetCoordinate(i+1), *pm301->units[i]));
-            pm301->axissc[i]->SetValue(cp.GetCoordinate(i+1));
+            text.Append(wxString::Format("%s: %.04f %s\t",
+                                         *pm301->coords[i], cp.GetCoordinate(i+1),
+                                         *pm301->units[i]));
+            pm301->axissc[i]->SetDoubleValue(cp.GetCoordinate(i+1));
         }
-        //WriteText(text,cp, 0);
+        wxMutexGuiLeave();
 
         std::cout << "PosThread: " << text.c_str() << std::endl;
-        wxThread::Sleep(850);
+
+        //TODO check smaller sleep intervals, also consider moving from TCP to UDP !!
+        wxThread::Sleep(400);
     }
     return NULL;
 }
@@ -632,9 +710,9 @@ void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
         // only call this if position update thread is not running
         //if(posthread == NULL) {
 
-        for (wxVector<wxSpinCtrlDouble*>::iterator it = axissc.begin(); it != axissc.end(); ++it)
-            (*it)->SetValue(0.0);
-        //}
+        for (wxVector<PosCtrl*>::iterator it = axissc.begin(); it != axissc.end(); ++it)
+            (*it)->SetDoubleValue(0.0);
+
         SendandReceive("set zero");
         break;
     case wxID_NO:
@@ -645,15 +723,16 @@ void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
     }
 }
 
-void PM301::OnSpinCTRLUpdated( wxCommandEvent& event ) //wxSpinDoubleEvent& event )
+void PM301::OnPosCTRLUpdated( wxCommandEvent& event )
 {
     int id = event.GetId() - ID_SPINCTRLS;
-    //std::cout << "ID: " << id << std::endl;
+    // std::cout << "ID: " << id << std::endl;
     if(id < 0 || id >= (int)get_nraxes()) {
         wxLogError("Event ID in SpinCtrl Handler wrong");
     }
 
-    double value = axissc[id]->GetValue();
+    const double curaxpos = axissc[id]->GetDoubleValue();
+
     // std::cout << value << " sc value update " << std::endl;
     // if(!entered.ToDouble(&value)){
     //     wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
@@ -663,10 +742,32 @@ void PM301::OnSpinCTRLUpdated( wxCommandEvent& event ) //wxSpinDoubleEvent& even
     //std::cout << "got " << value << std::endl;
 
     wxString text;
-    text.Printf("ma %s=%f", *coords[id], value);
+    text.Printf("ma %s=%f", *coords[id], curaxpos);
     std::cout << "command to update pos: " << text.c_str();
     text = SendandReceive(text);
-    std::cout  << " it returned: " << text.c_str() << std::endl;
+    std::cout  << " it returned: |" << text.c_str()  << "|" << std::endl;
+
+    // // some test to try to find the mysterious SC update bug
+    // usleep(600000);
+    //std::cout << std::endl;
+    //text.Printf("OK");
+
+    //FIXME better error check
+    if(!text.StartsWith("OK")) {
+        text.Printf("Softlimit Error!");
+        wxMessageBox(text, wxT("Warning"),
+                     wxOK | wxICON_INFORMATION, this);
+    }
+
+    Position cp = getcurpos();
+    set_cp(cp); // so that the main frame can use it
+    std::cout  << " update position due to error cond:\n\t"
+               << *coords[id] << ": " << cp.GetCoordinate(id+1)
+               << " " << *units[id]
+               << std::endl;
+
+    axissc[id]->SetDoubleValue(cp.GetCoordinate(id+1));
+
 }
 
 void PM301::OnBitmapbuttonClick( wxCommandEvent& event )
@@ -684,7 +785,7 @@ void PM301::OnBitmapbuttonClick( wxCommandEvent& event )
     }
 
     std::cout << " bitmap button " << id << " clicked " << std::endl;
-    axissc[id]->SetValue(get_cp().GetCoordinate(id+1));
+    axissc[id]->SetDoubleValue(get_cp().GetCoordinate(id+1));
 }
 
 
@@ -696,4 +797,3 @@ void PM301::OnButtonSavexmlClick( wxCommandEvent& event )
 {
     SendandReceive("savexml");
 }
-

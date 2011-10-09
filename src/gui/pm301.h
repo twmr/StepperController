@@ -69,12 +69,59 @@ class PositionUpdateThread;
 #define SOCKET_ID 9980
 #define ID_SPINCTRLS 9000
 
+
+//----------------------------------------------------------------------------
+// ComTextCtrl
+//----------------------------------------------------------------------------
+class ComTextCtrl: public wxTextCtrl
+{
+public:
+    ComTextCtrl( wxWindow* parent, wxWindowID id, const wxString& value = "",
+                 const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
+                 long style = wxTE_PROCESS_ENTER, const wxValidator& validator = wxDefaultValidator,
+                 const wxString& name = wxTextCtrlNameStr ) :
+        wxTextCtrl( parent, id, value, pos, size, style, validator , name )
+        {
+        }
+    bool CheckValue( void )  { return save_value != GetValue(); };
+    void SetValue( const wxString& value )  { save_value = value; wxTextCtrl::SetValue( value ); };
+
+private:
+    wxString save_value; //!< old value gets saved if command is issued
+
+    DECLARE_EVENT_TABLE()
+};
+
+
+//----------------------------------------------------------------------------
+// PosCtrl
+//----------------------------------------------------------------------------
+
+class PosCtrl: public ComTextCtrl
+{
+public:
+    PosCtrl( wxWindow* parent, wxWindowID id, const wxString& value = "",
+             const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
+             long style = wxTE_PROCESS_ENTER, const wxValidator& validator = wxDefaultValidator,
+             const wxString& name = wxTextCtrlNameStr );
+    void SetValidatorValue( const wxString& value )  { dummy_value = value; ComTextCtrl::SetValue( value ); };
+    void SetDoubleValue( double value );
+    double GetDoubleValue() const;
+
+private:
+    //Ask
+    wxString dummy_value; //!< value for wxTextValidato
+
+    DECLARE_EVENT_TABLE()
+};
+
+
 /*!
  * PM301 class declaration
  */
 
 class PM301: public wxFrame
-{    
+{
     DECLARE_CLASS( PM301 )
     DECLARE_EVENT_TABLE()
 
@@ -116,13 +163,11 @@ public:
 
 ////@end PM301 event handler declarations
 
-    void OnSpinCTRLUpdated( wxCommandEvent& event ); //wxSpinDoubleEvent& event );
-    //void OnSpinctrl1Updated( wxSpinDoubleEvent& event );
-    //void OnSpinctrl2Updated( wxSpinDoubleEvent& event );
+    void OnPosCTRLUpdated( wxCommandEvent& event );
     void OnSocketEvent( wxSocketEvent& event );
     void OnBitmapbuttonClick( wxCommandEvent& event );
     void OnRadioboxSelected( wxCommandEvent& event );
-    
+
 ////@begin PM301 member function declarations
 
     /// Retrieves bitmap resources
@@ -152,7 +197,7 @@ public:
     wxTextCtrl* batchmodetextctl;
 ////@end PM301 member variables
 
-    wxVector<wxSpinCtrlDouble*> axissc;
+    wxVector<PosCtrl*> axissc;
     wxVector<wxBitmapButton*> axisbb;
     wxVector<wxStaticText*> axisst;
     wxVector<wxBoxSizer*> axisbs;
@@ -161,7 +206,7 @@ public:
     Position getcurpos();
     void initaxes();
     const wxString SendandReceive(const wxString& msgstr);
-    
+
     //protect critical data with mutexs
     Position get_cp() const {
         wxMutexLocker lock(m_mutex);
@@ -169,10 +214,10 @@ public:
             std::cerr << "mutex lock error" << std::endl;
             exit(1);
         }
-        
+
         //if (posthread == NULL)
         //    cp_ = getcurpos();
-        
+
         return cp_;
     };
     void set_cp(const Position &cp) {
@@ -207,7 +252,7 @@ public:
             file.Open(path);
         }
     virtual void *Entry();
-            
+
 private:
     wxTextCtrl* batchmodetextctl_;
     wxTextFile file;
@@ -221,7 +266,7 @@ public:
         pm301(p)
         {};
     virtual void *Entry();
-    
+
 private:
     PM301 *pm301;
 };
