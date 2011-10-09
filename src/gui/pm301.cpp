@@ -494,7 +494,6 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
             }
         }
         for(size_t i=0; i < get_nraxes(); ++i) {
-            axissc[i]->SetDoubleValue(initpos.GetCoordinate(i+1));
             axissc[i]->Enable(false);
         }
     } else
