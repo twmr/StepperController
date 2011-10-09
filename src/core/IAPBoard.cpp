@@ -205,12 +205,12 @@ std::string IAPBoard::strip_ctrl_junk(const std::string &rply) const
         start = errpos + 1;
 
     std::string reptrunc = rply.substr(0,rply.length()-2);
-    std::cout << "stripp last2chars: |" << reptrunc << "|" << std::endl;
+    // std::cout << "strip last2chars: |" << reptrunc << "|" << std::endl;
 
     reptrunc = reptrunc.substr(start);
     size_t pos = reptrunc.find_first_not_of(" ");
     reptrunc = reptrunc.substr(pos);
-    std::cout << "cleaned/stripped string: |" << reptrunc << "|" << std::endl;
+    // std::cout << "cleaned string: |" << reptrunc << "|" << std::endl;
 
     return reptrunc;
 }
@@ -311,7 +311,7 @@ int IAPBoard::send_getint_command(const std::string & cmd) const
         return minval;
     }
 
-    return boost::lexical_cast<int>(reply.substr(4,reply.length()-5));
+    return boost::lexical_cast<int>(reptrunc);
 }
 
 

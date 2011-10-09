@@ -132,7 +132,7 @@
         <long name="locked">0</long>
         <string name="template-name">""</string>
         <bool name="dirty">1</bool>
-        <long name="makefile-last-written">-333379715</long>
+        <long name="makefile-last-written">3961587581</long>
         <string name="Compiler name">""</string>
         <string name="Build mode">"Debug"</string>
         <string name="Unicode mode">"Unicode"</string>
@@ -201,7 +201,7 @@
           <long name="locked">0</long>
           <string name="template-name">"GCC"</string>
           <bool name="dirty">0</bool>
-          <long name="makefile-last-written">-333379715</long>
+          <long name="makefile-last-written">3961587581</long>
           <string name="Compiler name">"GCC"</string>
           <string name="Build mode">"Release"</string>
           <string name="Unicode mode">"Unicode"</string>
@@ -679,13 +679,14 @@
                   <string name="proxy-type">"wbStaticBoxSizerProxy"</string>
                   <string name="proxy-Id name">"wxID_ANY"</string>
                   <long name="proxy-Id value">-1</long>
-                  <string name="proxy-Label">"Set New Stepper Position"</string>
+                  <string name="proxy-Label">"Stepper Position"</string>
                   <string name="proxy-Member variable name">"poswidget"</string>
                   <string name="proxy-Sizer member variable name">"posSizer"</string>
                   <string name="proxy-Foreground colour">""</string>
                   <string name="proxy-Font">""</string>
                   <bool name="proxy-Hidden">0</bool>
                   <bool name="proxy-Enabled">1</bool>
+                  <string name="proxy-Parenting">"Use wxWidgets version"</string>
                   <string name="proxy-Static box class">"wxStaticBox"</string>
                   <string name="proxy-Orientation">"Vertical"</string>
                   <string name="proxy-AlignH">"Centre"</string>
@@ -1073,7 +1074,8 @@
                 <string name="proxy-Implementation filename">""</string>
                 <string name="proxy-Header filename">""</string>
                 <string name="proxy-Member variable name">"batchmodetextctl"</string>
-                <string name="proxy-Initial value">"Batch Log"</string>
+                <string name="proxy-Initial value">"Batch Log
+"</string>
                 <long name="proxy-Max length">0</long>
                 <string name="proxy-Help text">""</string>
                 <string name="proxy-Tooltip text">""</string>
