@@ -93,7 +93,7 @@ void PosCtrl::OnKeyDown( wxKeyEvent& event )
     std::cout << "idx:" << event.GetId() << std::endl;
 
     if ( event.GetKeyCode() != WXK_UP && event.GetKeyCode() != WXK_DOWN ) {
-        std::cout << "skip" << std::endl;
+        // std::cout << "skip" << std::endl;
         event.Skip();
         return;
     }
@@ -120,14 +120,12 @@ void PosCtrl::PositionUpdate()
     if(!text.StartsWith("OK")) {
         wxMessageBox(text, wxT("Warning"),
                      wxOK | wxICON_INFORMATION, &ref_);
+
     }
 
+    // always update position after a "ma" call
     Position cp = ref_.getcurpos();
-    ref_.set_cp(cp); // so that the main frame can use it
-    std::cout  << " update position due to error cond:\n\t"
-               << *ref_.coords[GetAxisIdx()] << ": " << cp.GetCoordinate(GetAxisIdx()+1)
-               << " " << *ref_.units[GetAxisIdx()]
-               << std::endl;
+    SetDoubleValue(cp.GetCoordinate(GetAxisIdx()+1));
 }
 
 

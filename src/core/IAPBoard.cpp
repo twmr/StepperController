@@ -570,6 +570,7 @@ void IAPBoard::reset()
 }
 
 
+//FIXME don't use 1SP0, use software offsets
 //Send Command 1SP0 to each axis
 int IAPBoard::SetZero() const
 {
