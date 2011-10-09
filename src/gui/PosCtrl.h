@@ -57,6 +57,7 @@ private:
     void OnKeyUp( wxKeyEvent& event );
     void OnKeyDown( wxKeyEvent& event );
     void OnEnter( wxCommandEvent & event);
+    void PositionUpdate();
 
     //Ask Werner Smekal
     wxString dummy_value; //!< value for wxTextValidato

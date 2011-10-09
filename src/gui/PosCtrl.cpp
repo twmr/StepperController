@@ -83,18 +83,8 @@ void PosCtrl::OnKeyUp( wxKeyEvent& event )
         return;
     }
 
-    switch ( kc )
-    {
-    case WXK_UP:
-        std::cout << "sending update cmd for pos widget" << std::endl;
-        break;
-    case WXK_DOWN:
-        std::cout << "sending update cmd for pos widget" << std::endl;
-        break;
-    }
-
+    PositionUpdate();
     //SetInsertionPointEnd( );
-
 }
 
 void PosCtrl::OnKeyDown( wxKeyEvent& event )
@@ -117,12 +107,9 @@ void PosCtrl::OnKeyDown( wxKeyEvent& event )
         Decrement();
         break;
     }
-
-     std::cout << "Key " << kc << " pressed" << std::endl;
 }
 
-
-void PosCtrl::OnEnter( wxCommandEvent& event )
+void PosCtrl::PositionUpdate()
 {
     wxString text;
     text.Printf("ma %s=%f", *ref_.coords[GetAxisIdx()], GetDoubleValue());
@@ -130,9 +117,7 @@ void PosCtrl::OnEnter( wxCommandEvent& event )
     text = ref_.SendandReceive(text);
     std::cout  << "PosCtrl: UpdatePos returned: |" << text.c_str()  << "|" << std::endl;
 
-    //FIXME better error check
     if(!text.StartsWith("OK")) {
-        text.Printf("Softlimit Error!");
         wxMessageBox(text, wxT("Warning"),
                      wxOK | wxICON_INFORMATION, &ref_);
     }
@@ -143,4 +128,10 @@ void PosCtrl::OnEnter( wxCommandEvent& event )
                << *ref_.coords[GetAxisIdx()] << ": " << cp.GetCoordinate(GetAxisIdx()+1)
                << " " << *ref_.units[GetAxisIdx()]
                << std::endl;
+}
+
+
+void PosCtrl::OnEnter( wxCommandEvent& event )
+{
+    PositionUpdate();
 }
