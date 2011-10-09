@@ -192,6 +192,28 @@ void IAPBoard::disconnect()
     connected = false;
 }
 
+//removes junk characters from messages which are sent back from the PM381 controller
+//there are 3 types of messages:
+// 01:!  error-string\r\n
+// 01:OK\r\n
+// 01:string\r\n
+std::string IAPBoard::strip_ctrl_junk(const std::string &rply) const
+{
+    const size_t errpos = 3; //index of the ! in the error messages of the PM381
+    size_t start = errpos;
+    if(rply[errpos] == '!')
+        start = errpos + 1;
+
+    std::string reptrunc = rply.substr(0,rply.length()-2);
+    std::cout << "stripp last2chars: |" << reptrunc << "|" << std::endl;
+
+    reptrunc = reptrunc.substr(start);
+    size_t pos = reptrunc.find_first_not_of(" ");
+    reptrunc = reptrunc.substr(pos);
+    std::cout << "cleaned/stripped string: |" << reptrunc << "|" << std::endl;
+
+    return reptrunc;
+}
 
 
 std::string IAPBoard::send_lowlevel(const std::string &cmd) const
@@ -246,20 +268,20 @@ int IAPBoard::send_command(const std::string & cmd, char* replymsg) const
     if(reply.length() < 5)
             return -E_SIZE_PM381_REPLY_SHORT;
 
-    std::string reptrunc = reply.substr(3,reply.length()-5);
+    std::string reptrunc = strip_ctrl_junk(reply);
+
     if(replymsg) strcpy(replymsg,reptrunc.c_str());
 
     // analyze reply msg from controller
     if(reply[3] == '!') {
         serial_interface->rslog(reptrunc ,"CONTROLLER ERROR ");
+        //FIXME locking ?!?!
+        latest_error_str_ = reptrunc;
         return -E_PM381_ERROR_MSG;
     }
     return 0;
 }
 
-/* returns the integer return code of the command */
-/* the return code of this function should only be used for commands
-   which return an interger value */
 
 // TODO remove this function and use a default value for reply in send_command
 int IAPBoard::send_command_quiet(const std::string & cmd) const
@@ -267,21 +289,29 @@ int IAPBoard::send_command_quiet(const std::string & cmd) const
     return send_command(cmd, NULL);
 }
 
+/* returns the integer return code of the command */
+/* the return code of this function should only be used for commands
+   which return an interger value */
 int IAPBoard::send_getint_command(const std::string & cmd) const
 {
+    // returning minval means an error has happened
+    int minval = std::numeric_limits<int>::min();
+
     std::cout << "send getint cmd called " <<  cmd << std::endl;
 
     std::string reply = send_lowlevel(cmd);
+    if(reply.length() < 5)
+            return minval;
 
-    if(reply[2] == '!'){
-        serial_interface->rslog(reply,"CONTROLLER ERROR : ");
-        return std::numeric_limits<int>::min();
+    std::string reptrunc = strip_ctrl_junk(reply);
+    if(reply[3] == '!'){
+        serial_interface->rslog(reptrunc,"CONTROLLER ERROR : ");
+        //FIXME locking ?!?!
+        latest_error_str_ = reptrunc;
+        return minval;
     }
 
-    if(reply.length() > 5)
-        return boost::lexical_cast<int>(reply.substr(3,reply.length()-5));
-    else
-        return std::numeric_limits<int>::min();
+    return boost::lexical_cast<int>(reply.substr(4,reply.length()-5));
 }
 
 
@@ -515,12 +545,11 @@ void IAPBoard::get_cur_position(Position& retpos) const
 
 void IAPBoard::get_upper_softlimits(Position& retsl) const
 {
-
   //const std::map<size_t,std::string>& id_string_map = get_coord_map();
   for(const_axesiter it = axes.begin(); it != axes.end(); ++it) {
     retsl.SetCoordinate(it->get_id(),
-		    getConfig().getAxisElement<int>(it->get_id(),"UpperLimit")*it->get_factor()
-		    );
+                        getConfig().getAxisElement<int>(it->get_id(),"UpperLimit") *
+                        it->get_factor());
   }
 
 }
@@ -530,31 +559,14 @@ void IAPBoard::get_lower_softlimits(Position& retsl) const
   //const std::map<size_t,std::string>& id_string_map = get_coord_map();
   for(const_axesiter it = axes.begin(); it != axes.end(); ++it) {
     retsl.SetCoordinate(it->get_id(),
-		    getConfig().getAxisElement<int>(it->get_id(),"LowerLimit")*it->get_factor()
-		    );
+                        getConfig().getAxisElement<int>(it->get_id(),"LowerLimit") *
+                        it->get_factor());
   }
-}
-
-
-
-void IAPBoard::test(char *msg)
-{
-    //FIXME reimplement test function
-
-    //char buffer[1024];
-
-    // //waits for incoming dota, if no data arrives blocks forever
-    // serial_interface->rslog(" serial test", "#>");
-
-    // while(serial_interface->receive(buffer, 1024) <= 0 ) {
-    //     sleep(1);
-    // }
-    // sock.async_send(buffer);
 }
 
 void IAPBoard::reset()
 {
-    std::cout << "board: reset" << std::endl;
+    std::cout << "board: reset (not needed at the moment)" << std::endl;
 }
 
 

@@ -165,7 +165,6 @@ public:
     int send_getint_command(const std::string &) const;
 
     void reset();
-    void test(char*);
     void connect();
     void disconnect();
     int initAxes();
@@ -233,14 +232,19 @@ public:
     std::map<std::string, size_t>& get_inv_coord_map()
         { return inv_coordinate_map; };
 
+    // TODO combine this with the get_err_string() stuff
+    const std::string& get_latest_error() const {  return latest_error_str_; };
 
 
 private:
     int save_setaxisnum(const size_t) const;
+    std::string strip_ctrl_junk(const std::string&) const;
     std::string send_lowlevel(const std::string&) const;
     bool connected;
     STD_TR1::shared_ptr< RS232 > serial_interface;
-    STD_TR1::shared_ptr< std::mutex > boardmutex;
+
+    //TODO use this mutex
+    // STD_TR1::shared_ptr< std::mutex > boardmutex;
     IAPconfig &config_;
     std::map<size_t, std::string> coordinate_map;
     std::map<size_t, std::string> unit_map;
@@ -253,6 +257,7 @@ private:
         size_t axis_id;
     } envion;
 
+    mutable std::string latest_error_str_;
     std::vector<Axis> axes;
     Axis *curaxis;
     mutable Axis *save_curaxis;

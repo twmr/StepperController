@@ -31,6 +31,7 @@
 
 #include "global.hpp"
 #include "position.hpp"
+#include "PosCtrl.h"
 
 
 /*!
@@ -67,54 +68,6 @@ class PositionUpdateThread;
 #define ID_AXESRADIOBOX 8999
 #define ID_BITMAPBUTTONS 8899
 #define SOCKET_ID 9980
-#define ID_SPINCTRLS 9000
-
-
-//----------------------------------------------------------------------------
-// ComTextCtrl
-//----------------------------------------------------------------------------
-class ComTextCtrl: public wxTextCtrl
-{
-public:
-    ComTextCtrl( wxWindow* parent, wxWindowID id, const wxString& value = "",
-                 const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
-                 long style = wxTE_PROCESS_ENTER, const wxValidator& validator = wxDefaultValidator,
-                 const wxString& name = wxTextCtrlNameStr ) :
-        wxTextCtrl( parent, id, value, pos, size, style, validator , name )
-        {
-        }
-    bool CheckValue( void )  { return save_value != GetValue(); };
-    void SetValue( const wxString& value )  { save_value = value; wxTextCtrl::SetValue( value ); };
-
-private:
-    wxString save_value; //!< old value gets saved if command is issued
-
-    DECLARE_EVENT_TABLE()
-};
-
-
-//----------------------------------------------------------------------------
-// PosCtrl
-//----------------------------------------------------------------------------
-
-class PosCtrl: public ComTextCtrl
-{
-public:
-    PosCtrl( wxWindow* parent, wxWindowID id, const wxString& value = "",
-             const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
-             long style = wxTE_PROCESS_ENTER, const wxValidator& validator = wxDefaultValidator,
-             const wxString& name = wxTextCtrlNameStr );
-    void SetValidatorValue( const wxString& value )  { dummy_value = value; ComTextCtrl::SetValue( value ); };
-    void SetDoubleValue( double value );
-    double GetDoubleValue() const;
-
-private:
-    //Ask
-    wxString dummy_value; //!< value for wxTextValidato
-
-    DECLARE_EVENT_TABLE()
-};
-
 
 /*!
  * PM301 class declaration
@@ -177,10 +130,6 @@ public:
     wxIcon GetIconResource( const wxString& name );
 ////@end PM301 member function declarations
 
-    void SendMessage(const wxString&);
-    void SendMessage(const std::string&);
-    void SendMessage(const char *);
-    void send();
     void ToggleBatchMode(void);
 
     /// Should we show tooltips?

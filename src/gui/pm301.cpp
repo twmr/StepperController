@@ -65,67 +65,6 @@ BEGIN_EVENT_TABLE( PM301, wxFrame )
 
 END_EVENT_TABLE()
 
-//----------------------------------------------------------------------------
-// ComTextCtrl
-//----------------------------------------------------------------------------
-
-BEGIN_EVENT_TABLE( ComTextCtrl, wxTextCtrl )
-END_EVENT_TABLE( )
-
-//----------------------------------------------------------------------------
-// PosTextCtrl
-//----------------------------------------------------------------------------
-
-BEGIN_EVENT_TABLE( PosCtrl, wxTextCtrl )
-END_EVENT_TABLE( )
-
-PosCtrl::PosCtrl( wxWindow* parent, wxWindowID id, const wxString& value,
-                  const wxPoint& pos, const wxSize& size, long style, const wxValidator& validator,
-                  const wxString& name ) :
-              ComTextCtrl( parent, id, value, pos, size, style, validator , name )
-{
-  // initialize dummy_value since content of dummy_value is transfered to TextCtrl
-  dummy_value = value;
-
-  // set validator - only numeric input is allowed
-  // the next line crashes so we use the workaround below
-  //wxStringList IncludeList( "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-  //                          "+", "-", "e", "." );
-  // set validator - only numeric input is allowed
-  // the next line crashes so we use the workaround below
-  //wxStringList IncludeList( "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-  //                          "+", "-", "e", "." );
-  wxArrayString Includes;
-  for(size_t i=0; i < 10; i++){
-      Includes.Add(wxString::Format("%d",i));
-  }
-
-  Includes.Add("+");
-  Includes.Add("-");
-  Includes.Add("e");
-  Includes.Add(".");
-
-  wxTextValidator Validator( wxFILTER_INCLUDE_CHAR_LIST , &dummy_value );
-  Validator.SetIncludes( Includes );
-  this->SetValidator( Validator );
-}
-
-void PosCtrl::SetDoubleValue( double value )
-{
-    ComTextCtrl::SetValue( wxString::Format("%.04f",value) );
-}
-
-double PosCtrl::GetDoubleValue() const
-{
-    wxString text = ComTextCtrl::GetValue();
-    double retval;
-    text.ToDouble(&retval);
-    return retval;
-}
-
-
-
-
 /*
  * PM301 constructors
  */
@@ -305,7 +244,7 @@ void PM301::CreateControls()
     wxButton* itemButton19 = new wxButton( itemFrame1, ID_BUTTON1, _("Quit Batch Mode"), wxDefaultPosition, wxDefaultSize, 0 );
     itemBoxSizer16->Add(itemButton19, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-    batchmodetextctl = new wxTextCtrl( itemFrame1, ID_TEXTCTRL6, _("Batch Log"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE );
+    batchmodetextctl = new wxTextCtrl( itemFrame1, ID_TEXTCTRL6, _("Batch Log\n"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE );
     batchmodelog->Add(batchmodetextctl, 1, wxGROW|wxALL, 5);
 
     wxToolBar* itemToolBar21 = CreateToolBar( wxTB_FLAT|wxTB_HORIZONTAL, ID_TOOLBAR );
@@ -334,23 +273,22 @@ void PM301::CreateControls()
         axisst.push_back(new wxStaticText(posSizer->GetStaticBox(), -1,
                                           wxString::Format("%s [%s]:", *coords[i], *units[i]),
                                           wxDefaultPosition, wxDefaultSize, 0));
-        axissc.push_back(new PosCtrl(posSizer->GetStaticBox(), ID_SPINCTRLS+i, _T("0"),
+        axissc.push_back(new PosCtrl(posSizer->GetStaticBox(), *this, ID_POSCTRLS+i, _T("0"),
                                      wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER));
 
         //axisbb.push_back(new wxBitmapButton(posSizer->GetStaticBox(), ID_BITMAPBUTTONS+i,
         //                                    wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW));
 
         axissc[i]->SetDoubleValue(initpos.GetCoordinate(i+1));
+        axissc[i]->SetIncrement(0.02);
         //TMP
         //axissc[i]->SetDigits(4);
-        //axissc[i]->SetIncrement(0.1);
 
         axisbs[i]->Add(axisst[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
         axisbs[i]->Add(axissc[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
         //axisbs[i]->Add(axisbb[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
         posSizer->Add(axisbs[i], 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5);
 
-        axissc[i]->Bind(wxEVT_COMMAND_TEXT_ENTER, &PM301::OnPosCTRLUpdated, this);
         //axisbb[i]->Bind(wxEVT_COMMAND_BUTTON_CLICKED, &PM301::OnBitmapbuttonClick, this);
 
         axesradioboxStrings.Add(wxString::Format("&%s",*coords[i]));
@@ -400,15 +338,6 @@ wxIcon PM301::GetIconResource( const wxString& name )
 ////@end PM301 icon retrieval
 }
 
-void PM301::send(void)
-{
-    wxMutexLocker lock(m_tcpmutex);
-#ifdef TEST_NETWORK
-    s->Write(reinterpret_cast<void*>(&request), msglen);
-#endif
-}
-
-
 const wxString PM301::SendandReceive(const wxString& msgstr)
 {
     wxMutexLocker lock(m_tcpmutex);
@@ -425,29 +354,6 @@ const wxString PM301::SendandReceive(const wxString& msgstr)
         return wxString("OK");
     else
         return wxString(msg.msg);
-}
-
-void PM301::SendMessage(const wxString& msgstr)
-{
-    request.type = MSG_REQUEST;
-    strcpy(request.msg, msgstr.mb_str());
-    send();
-    s->Read(reinterpret_cast<void*>(&reply), msglen);
-}
-
-
-void PM301::SendMessage(const std::string& msgstr)
-{
-    request.type = MSG_REQUEST;
-    strcpy(request.msg, msgstr.c_str());
-    send();
-}
-
-void PM301::SendMessage(const char *msgstr)
-{
-    request.type = MSG_REQUEST;
-    strcpy(request.msg, msgstr);
-    send();
 }
 
 
@@ -651,8 +557,11 @@ void *BatchThread::Entry()
             wxString tmp(file[i].substr(6));
             sleep(wxAtoi(tmp));
         }
-
-        pm301->SendMessage(file[i]);
+        std::cout << file[i] << std::endl;
+        wxString ret = pm301->SendandReceive(file[i]);
+        wxMutexGuiEnter();
+        batchmodetextctl_->AppendText(ret + _T("\n"));
+        wxMutexGuiLeave();
     }
     wxMutexGuiEnter();
     batchmodetextctl_->AppendText(_T("Finished executing batch file"));
@@ -720,53 +629,6 @@ void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
     default:
         wxLogError(wxT("Unexpected wxMess Dialog return code!"));
     }
-}
-
-void PM301::OnPosCTRLUpdated( wxCommandEvent& event )
-{
-    int id = event.GetId() - ID_SPINCTRLS;
-    // std::cout << "ID: " << id << std::endl;
-    if(id < 0 || id >= (int)get_nraxes()) {
-        wxLogError("Event ID in SpinCtrl Handler wrong");
-    }
-
-    const double curaxpos = axissc[id]->GetDoubleValue();
-
-    // std::cout << value << " sc value update " << std::endl;
-    // if(!entered.ToDouble(&value)){
-    //     wxMessageBox(wxT("Entered string is not a number!"), wxT("Warning"), wxOK | wxICON_INFORMATION, this);
-    //     //set default value ?!?!?
-    //     return;
-    // }
-    //std::cout << "got " << value << std::endl;
-
-    wxString text;
-    text.Printf("ma %s=%f", *coords[id], curaxpos);
-    std::cout << "command to update pos: " << text.c_str();
-    text = SendandReceive(text);
-    std::cout  << " it returned: |" << text.c_str()  << "|" << std::endl;
-
-    // // some test to try to find the mysterious SC update bug
-    // usleep(600000);
-    //std::cout << std::endl;
-    //text.Printf("OK");
-
-    //FIXME better error check
-    if(!text.StartsWith("OK")) {
-        text.Printf("Softlimit Error!");
-        wxMessageBox(text, wxT("Warning"),
-                     wxOK | wxICON_INFORMATION, this);
-    }
-
-    Position cp = getcurpos();
-    set_cp(cp); // so that the main frame can use it
-    std::cout  << " update position due to error cond:\n\t"
-               << *coords[id] << ": " << cp.GetCoordinate(id+1)
-               << " " << *units[id]
-               << std::endl;
-
-    axissc[id]->SetDoubleValue(cp.GetCoordinate(id+1));
-
 }
 
 void PM301::OnBitmapbuttonClick( wxCommandEvent& event )

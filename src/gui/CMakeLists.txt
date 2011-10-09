@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-Wextra")
 add_executable(
 	moves_gui
 		iap_gui_app.cpp
+		PosCtrl.cpp
 		pm301.cpp
 )
 include_directories( 

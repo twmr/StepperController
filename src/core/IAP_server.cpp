@@ -127,10 +127,10 @@ namespace IAPServer
                 prepare_tcp_success_message();
         }
 #endif
-        else if(! data.compare("serialtest")) {
-            // fixme lock this
-            board->test(message.msg);
-        }
+        // else if(! data.compare("serialtest")) {
+        //     // fixme lock this
+        //     board->test(message.msg);
+        // }
         else if(! data.compare("close")) {
             prepare_tcp_message("stopping current session");
             //FIXME
@@ -326,9 +326,12 @@ namespace IAPServer
                     else // data[1] = 'r'  -> relative move
                         ret = board->move_rel(mypos);
 
-                    if(ret < 0)
+                    if(ret < 0) {
                         // todo use better error message
-                        prepare_tcp_err_message("Controller Error");
+                        std::ostringstream oss;
+                        oss << "Controller Error: " << board->get_latest_error();
+                        prepare_tcp_err_message(oss.str());
+                    }
                     else
                         prepare_tcp_success_message();
                 }
@@ -344,8 +347,8 @@ namespace IAPServer
             if(boost::regex_match(data, what, e2, boost::match_extra)) {
                 ret = board->send_command(data,message.msg);
                 if(ret < 0)
-                    prepare_tcp_err_message(
-                        board->get_err_string(static_cast<pm381_err_t>(-ret), message.msg));
+                    prepare_tcp_err_message(board->get_latest_error());
+                        // board->get_err_string(static_cast<pm381_err_t>(-ret), message.msg));
                 return;
             }
             else
@@ -365,7 +368,7 @@ void catch_int(int sig)
     map<size_t,string>& id_string_map = board->get_coord_map();
     ostringstream os;
 
-    os << "signal_handler:" << endl;
+    os << "signal_handler[" << sig << "]:" << endl;
 
     os << "saving current pos (bare) of all axes to xml file" << endl;
     for(BarePosition::coord_type::const_iterator
@@ -373,7 +376,6 @@ void catch_int(int sig)
         os << "\t\'" << id_string_map[it->first] << "\'=" << bp.GetCoordinate(it->first) << endl;
         board->getConfig().setAxisElement(it->first, "Position", bp.GetCoordinate(it->first));
     }
-    
     cout << os.str();
     (board->getConfig()).writeconfig();
     _exit(1);
