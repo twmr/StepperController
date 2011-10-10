@@ -22,6 +22,7 @@
     <UnitConversion>
       <unitname>mm</unitname>
       <factor>6.77966e-4</factor>
+      <offset>0</offset>
     </UnitConversion>
   </axis>
   <axis id="2" descriptor="y">
@@ -37,6 +38,7 @@
     <UnitConversion>
       <unitname>mm</unitname>
       <factor>1.0937500e-3</factor>
+      <offset>0</offset>
     </UnitConversion>
   </axis>
   <axis id="3" descriptor="phi">
@@ -52,6 +54,39 @@
     <UnitConversion>
       <unitname>deg</unitname>
       <factor>5.14286e-2</factor>
+      <offset>0</offset>
+    </UnitConversion>
+  </axis>
+  <axis id="4" descriptor="tilt">
+    <BaseSpeed>100</BaseSpeed>
+    <SlewSpeed>250</SlewSpeed>
+    <SlowJogSpeed>100</SlowJogSpeed>
+    <FastJogSpeed>400</FastJogSpeed>
+    <CreepSteps>50</CreepSteps>
+    <Accel>10000</Accel>
+    <LowerLimit>-10000</LowerLimit>
+    <UpperLimit>10000</UpperLimit>
+    <Position>0</Position>
+    <UnitConversion>
+      <unitname>dummy</unitname>
+      <factor>0.01</factor>
+      <offset>0</offset>
+    </UnitConversion>
+  </axis>
+  <axis id="5" descriptor="z">
+    <BaseSpeed>100</BaseSpeed>
+    <SlewSpeed>250</SlewSpeed>
+    <SlowJogSpeed>100</SlowJogSpeed>
+    <FastJogSpeed>400</FastJogSpeed>
+    <CreepSteps>50</CreepSteps>
+    <Accel>10000</Accel>
+    <LowerLimit>-10000</LowerLimit>
+    <UpperLimit>10000</UpperLimit>
+    <Position>0</Position>
+    <UnitConversion>
+      <unitname>dummy</unitname>
+      <factor>0.01</factor>
+      <offset>0</offset>
     </UnitConversion>
   </axis>
 </config>
