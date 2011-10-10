@@ -112,25 +112,27 @@ If you would like to see certain features implemented or support for
 certain devices, please use
 [githubs issue tracker](https://github.com/thisch/StepperController).
 
-Moves/IAP specific stuff:
----------------------------
-
-Allowed Range for each axis:
-x:
-y:
-....
 
 Debugging the software( without hardware):
 -----------------------------
 
- If you want to test the GUI without launching a server, you have to
- undefine the TEST_NETWORK macro in src/gui/pm301.cpp like this
+If you want to test the GUI without launching a server, you have to
+comment out the
 
-     #undef TEST_NETWORK
+     #add_definitions(-DDEBUG_STANDALONE)
 
+line in src/gui/CMakeLists.txt and recompile your program. If you want
+to test the server and the GUI without hardware, then you only need to
+uncomment
+
+     #add_definitions(-DDEBUG_SERIAL)
+
+in src/core/CMakeLists.txt.
 
 TODO:
 -----
+* use Exceptions inside the IAPBoard and catch them inside the Server
+* improve error handling in the C++ code
 * implement wait command
 * remove Multiplier xml element from parameters.xml
 * Windows build support

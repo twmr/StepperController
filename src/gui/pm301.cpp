@@ -32,9 +32,6 @@
 ////@begin XPM images
 ////@end XPM images
 
-// #undef TEST_NETWORK
-#define TEST_NETWORK
-
 /*
  * PM301 type definition
  */
@@ -127,7 +124,7 @@ void PM301::Init()
 ////@end PM301 member initialisation
     posthread=NULL;
 
-#ifdef TEST_NETWORK
+#ifndef DEBUG_STANDALONE
     std::cout << "connecting to localhost" << std::endl;
     wxIPV4address addr;
     addr.Hostname(wxT("localhost"));
@@ -348,12 +345,14 @@ const wxString PM301::SendandReceive(const wxString& msgstr)
     msg_t msg;
     msg.type = MSG_REQUEST;
     strcpy(msg.msg, msgstr.mb_str());
-#ifdef TEST_NETWORK
+
+#ifndef DEBUG_STANDALONE
     s->Write(reinterpret_cast<void*>(&msg), msglen);
     //std::cout << "msg sent" << std::endl;
     s->Read(reinterpret_cast<void*>(&msg), msglen);
     //std::cout << "msg recv" << std::endl;
 #endif
+
     if(msg.type == MSG_SUCCESS)
         return wxString("OK");
     else
@@ -428,15 +427,14 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
 
 void PM301::initaxes()
 {
-
-#ifdef TEST_NETWORK
-    wxString text = SendandReceive("ga");
-#else
+#ifdef DEBUG_STANDALONE
     wxString text;
-
     text.Printf("1:x:mm\n2:y:mm\n3:z:um\n4:\u0398:deg\n5:k:m\n6:l:km\n");
+#else
+    wxString text = SendandReceive("ga");
 #endif
-    std::cout << "Command \"ga\" returned: " << text.c_str() << std::endl;
+
+    std::cout << "Command \"ga\" (get axes) returned: " << text.c_str() << std::endl;
     wxVector<Position::type> vec;
     wxStringTokenizer tkz(text, wxT("\n"));
     while ( tkz.HasMoreTokens() )
@@ -459,9 +457,7 @@ void PM301::initaxes()
 
 Position PM301::getcurpos()
 {
-#ifdef TEST_NETWORK
-    wxString text = SendandReceive("pp");
-#else
+#ifdef DEBUG_STANDALONE
     static double pos[]={3.21,91.19,324.19,-1239.09, 9234,93,-0.2};
     wxString text;
     std::cout << "GUI_position_parser: nraxis "
@@ -474,6 +470,8 @@ Position PM301::getcurpos()
     }
     std::cout << "GUI_position_parser: pos-string:\n"
               << text.c_str() << std::endl;
+#else
+    wxString text = SendandReceive("pp");
 #endif
 
     wxVector<Position::type> vec;
