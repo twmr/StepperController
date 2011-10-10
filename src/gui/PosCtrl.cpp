@@ -78,7 +78,7 @@ void PosCtrl::OnKeyUp( wxKeyEvent& event )
     int kc = event.GetKeyCode();
 
     if ( kc != WXK_UP && kc != WXK_DOWN ) {
-        std::cout << "skip" << std::endl;
+        // std::cout << "skip" << std::endl;
         event.Skip();
         return;
     }
@@ -90,7 +90,7 @@ void PosCtrl::OnKeyUp( wxKeyEvent& event )
 void PosCtrl::OnKeyDown( wxKeyEvent& event )
 {
     int kc = event.GetKeyCode();
-    std::cout << "idx:" << event.GetId() << std::endl;
+    // std::cout << "idx:" << event.GetId() << std::endl;
 
     if ( event.GetKeyCode() != WXK_UP && event.GetKeyCode() != WXK_DOWN ) {
         // std::cout << "skip" << std::endl;
@@ -113,9 +113,10 @@ void PosCtrl::PositionUpdate()
 {
     wxString text;
     text.Printf("ma %s=%f", *ref_.coords[GetAxisIdx()], GetDoubleValue());
-    std::cout << "command to update pos: " << text.c_str();
+    std::cout << "command to update pos: " << text.c_str() << std::endl;
     text = ref_.SendandReceive(text);
-    std::cout  << "PosCtrl: UpdatePos returned: |" << text.c_str()  << "|" << std::endl;
+    // std::cout  << "PosCtrl: UpdatePos returned: |"
+    //            << text.c_str()  << "|" << std::endl;
 
     if(!text.StartsWith("OK")) {
         wxMessageBox(text, wxT("Warning"),

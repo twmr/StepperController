@@ -66,7 +66,7 @@ class PositionUpdateThread;
 ////@end control identifiers
 
 #define ID_AXESRADIOBOX 8999
-#define ID_BITMAPBUTTONS 8899
+// #define ID_BITMAPBUTTONS 8899
 #define SOCKET_ID 9980
 
 /*!
@@ -118,7 +118,7 @@ public:
 
     void OnPosCTRLUpdated( wxCommandEvent& event );
     void OnSocketEvent( wxSocketEvent& event );
-    void OnBitmapbuttonClick( wxCommandEvent& event );
+    // void OnBitmapbuttonClick( wxCommandEvent& event );
     void OnRadioboxSelected( wxCommandEvent& event );
 
 ////@begin PM301 member function declarations
@@ -147,14 +147,17 @@ public:
 ////@end PM301 member variables
 
     wxVector<PosCtrl*> axissc;
-    wxVector<wxBitmapButton*> axisbb;
+    // wxVector<wxBitmapButton*> axisbb;
     wxVector<wxStaticText*> axisst;
     wxVector<wxBoxSizer*> axisbs;
     wxRadioBox* axesradiobox;
 
     Position getcurpos();
     void initaxes();
+    void UpdateGUIpositions();
     const wxString SendandReceive(const wxString& msgstr);
+
+    //THOMAS: do we really need get_cp and set_cp ???
 
     //protect critical data with mutexs
     Position get_cp() const {

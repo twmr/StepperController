@@ -275,15 +275,16 @@ void PM301::CreateControls()
         axisst.push_back(new wxStaticText(posSizer->GetStaticBox(), -1,
                                           wxString::Format("%s [%s]:", *coords[i], *units[i]),
                                           wxDefaultPosition, wxDefaultSize, 0));
-        axissc.push_back(new PosCtrl(posSizer->GetStaticBox(), *this, ID_POSCTRLS+i, _T("0"),
+
+        //TODO Focus events
+        axissc.push_back(new PosCtrl(posSizer->GetStaticBox(), *this, ID_POSCTRLS+i, "",
                                      wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER));
 
         //axisbb.push_back(new wxBitmapButton(posSizer->GetStaticBox(), ID_BITMAPBUTTONS+i,
         //                                    wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW));
 
-        axissc[i]->SetDoubleValue(initpos.GetCoordinate(i+1));
         axissc[i]->SetIncrement(0.02);
-        //TMP
+        //TODO
         //axissc[i]->SetDigits(4);
 
         axisbs[i]->Add(axisst[i], 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
@@ -300,6 +301,7 @@ void PM301::CreateControls()
                                    wxDefaultSize, axesradioboxStrings, 1, wxRA_SPECIFY_COLS );
     axesradiobox->SetSelection(0);
     axesradiobox->Show(false);
+    UpdateGUIpositions();
     jogmodelayout->Add(axesradiobox, 0, wxGROW, 5);
     batchmodelog->Show(false);
     mainswitcher->Layout();
@@ -379,12 +381,17 @@ void PM301::OnRadioboxSelected( wxCommandEvent& event )
 
 void PM301::OnCheckboxClick( wxCommandEvent& event )
 {
+    bool posctrl_disable_state = false;
+
     if(checkjog->IsChecked()) {
         wxString txt = SendandReceive("set jog");
-        std::cout << "checkboxclick sj returned " << txt.c_str() << std::endl;
+        // std::cout << "checkboxclick sj returned " << txt.c_str() << std::endl;
         axesradiobox->Show(true);
-        txt = SendandReceive("sa1");
-        std::cout << "checkboxclick sa1 returned " << txt.c_str() << std::endl;
+
+        //TODO convert selection into axis id
+        int selected = axesradiobox->GetSelection();
+        txt = SendandReceive(wxString::Format("set axis %d", selected+1));
+        std::cout << "checkboxclick: set axis returned " << txt.c_str() << std::endl;
 
         if(posthread) {
             wxLogError(wxT("ERROR: thread is already running ?!?!?!"));
@@ -401,24 +408,21 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
                 wxLogError(wxT("Can't run thread"));
             }
         }
-        for(size_t i=0; i < get_nraxes(); ++i) {
-            axissc[i]->Enable(false);
-        }
     } else
     {
         wxString txt = SendandReceive("unset jog");
-        std::cout << "checkboxclick usj returned " << txt.c_str() << std::endl;
+        // std::cout << "checkboxclick usj returned " << txt.c_str() << std::endl;
         axesradiobox->Show(false);
         if (posthread->Delete() != wxTHREAD_NO_ERROR )
             wxLogError(wxT("Can't delete the thread!"));
         else
             posthread = NULL;
 
-        for(size_t i=0; i < get_nraxes(); ++i) {
-            axissc[i]->Enable(true);
-        }
+        posctrl_disable_state = true;
     }
 
+    for(size_t i=0; i < get_nraxes(); ++i)
+        axissc[i]->Enable(posctrl_disable_state);
     jogmodelayout->Layout();
 }
 
@@ -494,19 +498,54 @@ Position PM301::getcurpos()
     return p;
 }
 
-
+//TODO clean this function up a bit
 void PM301::ToggleBatchMode(void)
 {
-    static bool batchstate = false;
-    basiccontrol->Show(batchstate);
-    if(batchstate && !checkjog->IsChecked())
-        axesradiobox->Show(false);
+    static bool switchtobatch = false;
+    switchtobatch = !switchtobatch; // toggle flag
 
-    batchmodelog->Show(!batchstate);
-    batchstate = !batchstate;
+    if(switchtobatch) {
+        //turn batch mode on, be sure that posthread gets killed
+
+        //FIXME send (checkbox-unchecked) update signal to checkbox !
+        //ATM do posthread-killing here
+        //TODO: unset jog mode
+        if(posthread) {
+            if (posthread->Delete() != wxTHREAD_NO_ERROR )
+                wxLogError(wxT("Can't delete the position updated thread!"));
+            else
+                posthread = NULL;
+        }
+
+        //if(!checkjog->IsChecked())
+        //else
+    }
+    else {
+        //TODO: make sure that batchthread is off!!!
+        set_cp(getcurpos());
+        UpdateGUIpositions();
+    }
+
+    //Reihenfolge ?!?!?!
+    checkjog->SetValue(false);
+    axesradiobox->Show(false);
+    jogmodelayout->Layout();
+    basiccontrol->Show(!switchtobatch);
+    batchmodelog->Show(switchtobatch);
     mainswitcher->Layout();
 
 }
+
+//make sure that you call wxMutexGuiEnter/Leave when you want to call
+//this function in threads
+void PM301::UpdateGUIpositions(void)
+{
+    Position cp = get_cp();
+    for(size_t i = 0; i < get_nraxes(); ++i) {
+        axissc[i]->SetDoubleValue(cp.GetCoordinate(i+1));
+    }
+}
+
 
 /*
  * wxEVT_LEFT_DOWN event handler for ID_BUTTON1
@@ -578,24 +617,24 @@ void* PositionUpdateThread::Entry()
         if ( TestDestroy() )
             break;
 
-        wxString text;
         Position cp = pm301->getcurpos();
-        pm301->set_cp(cp); // so that the main frame can use it
-
-        //TODO only output BarePosition to statusbar
-        // or ???
-        text.Printf(wxT("Position:"));
+        pm301->set_cp(cp);
 
         //must be called in any thread which is not the gui main thread
         wxMutexGuiEnter();
+        pm301->UpdateGUIpositions();
+        wxMutexGuiLeave();
+
+        //todo only output bareposition to statusbar
+        // or ???
+        wxString text;
+        text.Printf("position:");
 
         for(size_t i = 0; i < pm301->get_nraxes(); ++i) {
             text.Append(wxString::Format("%s: %.04f %s\t",
                                          *pm301->coords[i], cp.GetCoordinate(i+1),
                                          *pm301->units[i]));
-            pm301->axissc[i]->SetDoubleValue(cp.GetCoordinate(i+1));
         }
-        wxMutexGuiLeave();
 
         std::cout << "PosThread: " << text.c_str() << std::endl;
 
@@ -620,10 +659,10 @@ void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
         // only call this if position update thread is not running
         //if(posthread == NULL) {
 
-        for (wxVector<PosCtrl*>::iterator it = axissc.begin(); it != axissc.end(); ++it)
-            (*it)->SetDoubleValue(0.0);
-
         SendandReceive("set zero");
+        set_cp(getcurpos());
+        UpdateGUIpositions();
+
         break;
     case wxID_NO:
         //wxLogError(wxT("no"));
@@ -633,23 +672,23 @@ void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
     }
 }
 
-void PM301::OnBitmapbuttonClick( wxCommandEvent& event )
-{
-    // wxBitmapButton* ptr = (wxBitmapButton*)event.GetEventObject();
-    // int i = 0;
-    // for (wxVector<wxBitmapButton*>::iterator it = axisbb.begin(); it != axisbb.end(); ++it, i++) {
-    //     if (ptr == *it)
-    //         break;
-    // }
+// void PM301::OnBitmapbuttonClick( wxCommandEvent& event )
+// {
+//     // wxBitmapButton* ptr = (wxBitmapButton*)event.GetEventObject();
+//     // int i = 0;
+//     // for (wxVector<wxBitmapButton*>::iterator it = axisbb.begin(); it != axisbb.end(); ++it, i++) {
+//     //     if (ptr == *it)
+//     //         break;
+//     // }
 
-    int id = event.GetId() - ID_BITMAPBUTTONS;
-    if(id < 0 || id >= (int)get_nraxes()) {
-        wxLogError("Event ID in Bitmapbutton Handler wrong");
-    }
+//     int id = event.GetId() - ID_BITMAPBUTTONS;
+//     if(id < 0 || id >= (int)get_nraxes()) {
+//         wxLogError("Event ID in Bitmapbutton Handler wrong");
+//     }
 
-    std::cout << " bitmap button " << id << " clicked " << std::endl;
-    axissc[id]->SetDoubleValue(get_cp().GetCoordinate(id+1));
-}
+//     std::cout << " bitmap button " << id << " clicked " << std::endl;
+//     axissc[id]->SetDoubleValue(get_cp().GetCoordinate(id+1));
+// }
 
 
 /*
