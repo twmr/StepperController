@@ -651,6 +651,9 @@ void* PositionUpdateThread::Entry()
 
 void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
 {
+    wxLogWarning(wxT("Disabled at the moment"));
+    return;
+
     wxMessageDialog dialog( NULL,wxT("Are you sure that you want to reset the stepper" \
                                      " positions to zero?"),
                             wxT("Warning"), wxNO_DEFAULT | wxYES_NO | wxICON_INFORMATION);
