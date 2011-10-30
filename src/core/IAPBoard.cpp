@@ -572,7 +572,7 @@ void IAPBoard::reset()
     std::cout << "board: reset (not needed at the moment)" << std::endl;
 }
 
-
+//TODO return value
 int IAPBoard::SetZero()
 {
     std::cout << "board: update current bare position to \'offset\'" << std::endl;
@@ -581,8 +581,7 @@ int IAPBoard::SetZero()
     get_cur_position(bp);
     for(auto& axis : axes) {
         axis.SetOffset(bp.GetCoordinate(axis.get_id()));
-        getConfig().setAxisElement<int>(axis.get_id(),"UnitConversion.Offset",bp.GetCoordinate(axis.get_id()));
+        getConfig().setAxisElement<int>(axis.get_id(),"UnitConversion.offset",bp.GetCoordinate(axis.get_id()));
     }
-    
     return 0;
 }
