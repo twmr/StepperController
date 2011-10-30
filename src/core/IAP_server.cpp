@@ -40,8 +40,7 @@ namespace po = boost::program_options;
 
 using namespace std;
 
-// mutex m;
-STD_TR1::shared_ptr<IAPBoard> board(static_cast<IAPBoard*>(0));//(nullptr);
+STD_TR1::shared_ptr<IAPBoard> board(static_cast<IAPBoard*>(nullptr));
 
 namespace IAPServer
 {

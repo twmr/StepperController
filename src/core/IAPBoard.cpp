@@ -37,15 +37,16 @@ Axis::Axis(const boost::property_tree::ptree &pt, IAPBoard* brd) :
     Desc_(pt.get<std::string>("<xmlattr>.descriptor")),
     UnitName_(pt.get<std::string>("UnitConversion.unitname")),
     UnitFactor_(pt.get<double>("UnitConversion.factor")),
+    Offset_(pt.get<BarePosition::type>("UnitConversion.offset")),
     BaseSpeed_(pt.get<int>("BaseSpeed")),
     SlewSpeed_(pt.get<int>("SlewSpeed")),
     SlowJogSpeed_(pt.get<int>("SlowJogSpeed")),
     FastJogSpeed_(pt.get<int>("FastJogSpeed")),
     CreepSteps_(pt.get<int>("CreepSteps")),
     Accel_(pt.get<int>("Accel")),
-    LowerLimit_(pt.get<int>("LowerLimit")),
-    UpperLimit_(pt.get<int>("UpperLimit")),
-    Position_(pt.get<int>("Position")),
+    LowerLimit_(pt.get<BarePosition::type>("LowerLimit")),
+    UpperLimit_(pt.get<BarePosition::type>("UpperLimit")),
+    Position_(pt.get<BarePosition::type>("Position")),
     Board_(brd)
 {
 }
@@ -64,6 +65,7 @@ void Axis::printAxis() const
     cout << "\tLowerLimit: " << LowerLimit_ << endl;
     cout << "\tUpperLimit: " << UpperLimit_ << endl;
     cout << "\tPosition: " << Position_ << endl;
+    cout << "\tOffset: " << Offset_ << endl;
     cout << "\tConversion to " << UnitName_ << " Factor: " << UnitFactor_
          << endl;
 }
@@ -338,7 +340,7 @@ void IAPBoard::conv2bareposition(BarePosition& ret, const Position &pos) const
         ret.SetCoordinate(it->first,
                           static_cast<BarePosition::type>(
                               pos.GetCoordinate(it->first)/
-                              getAxis(it->first)->get_factor()));
+                              getAxis(it->first)->get_factor() + getAxis(it->first)->GetOffset()));
     }
 }
 
@@ -352,9 +354,10 @@ void IAPBoard::conv2postion(Position& ret, const BarePosition &bpos) const
         //conversionfactor
         if(!getAxis(it->first)) return;
 
+        //conversion factor: user-specified-unit/steps
         ret.SetCoordinate(it->first,
                           static_cast<Position::type>(
-                              bpos.GetCoordinate(it->first)*
+                              (bpos.GetCoordinate(it->first) - getAxis(it->first)->GetOffset()) *
                               getAxis(it->first)->get_factor()));
     }
 
@@ -570,24 +573,16 @@ void IAPBoard::reset()
 }
 
 
-//FIXME don't use 1SP0, use software offsets
-//Send Command 1SP0 to each axis
-int IAPBoard::SetZero() const
+int IAPBoard::SetZero()
 {
-    std::cout << "board: set current positon to zero" << std::endl;
-    SaveEnvironment();
+    std::cout << "board: update current bare position to \'offset\'" << std::endl;
 
-    for(const_axesiter it = axes.begin(); it != axes.end(); ++it)
-    {
-        int ret = save_setaxisnum(it->get_id());
-        if (ret < 0){
-            RestoreEnvironment();
-            return ret;
-        }
-
-        send_command_quiet("1SP0");
+    BarePosition bp = createBarePosition();
+    get_cur_position(bp);
+    for(auto& axis : axes) {
+        axis.SetOffset(bp.GetCoordinate(axis.get_id()));
+        getConfig().setAxisElement<int>(axis.get_id(),"UnitConversion.Offset",bp.GetCoordinate(axis.get_id()));
     }
-
-    RestoreEnvironment();
+    
     return 0;
 }

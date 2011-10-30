@@ -56,6 +56,8 @@ public:
     size_t get_id() const { return ID_; };
     std::string get_desc() const { return Desc_; };
     std::string get_unitname() const { return UnitName_; };
+    void SetOffset(BarePosition::type val) { Offset_ = val; };
+    BarePosition::type GetOffset() const { return Offset_; };
     double get_factor() const { return UnitFactor_; };
     void printAxis(void) const;
     int UpdateConfiguration(void) const;
@@ -69,15 +71,16 @@ private:
     std::string Desc_;
     std::string UnitName_;
     double UnitFactor_;
+    BarePosition::type Offset_;
     long BaseSpeed_;
     long SlewSpeed_;
     long SlowJogSpeed_;
     long FastJogSpeed_;
     long CreepSteps_;
     long Accel_;
-    long LowerLimit_;
-    long UpperLimit_;
-    long Position_;
+    BarePosition::type LowerLimit_;
+    BarePosition::type UpperLimit_;
+    BarePosition::type Position_;
     IAPBoard* Board_;
 };
 
@@ -185,7 +188,7 @@ public:
     IAPconfig& getConfig() const { return config_; };
 
     bool is_connected() { return connected; };
-    int SetZero() const;
+    int SetZero();
 
     size_t GetNrOfAxes(void) const { return axes.size(); };
 
