@@ -259,11 +259,13 @@ namespace IAPServer
                         prepare_tcp_success_message();
                 }
                 else if(! setvar.compare("zero")) {
-                    // set current position to zero - this doesn't move
-                    // the stepper, only updates position inside the
-                    // Memory of the Stepper Controller Hardware
+                    // set current relative position to zero - this doesn't move
+                    // the stepper, only updates the offset-position inside the
+                    // IAPConfig object
                     board->SetZero();
-                    prepare_tcp_message("TODO setzero return message");
+                    //TODO SetZero is assumed to always succeed
+                    //prepare_tcp_message("TODO setzero return message");
+                    prepare_tcp_success_message();
                 }
                 else
                     prepare_tcp_err_message("invalid set command (check syntax)");
@@ -362,7 +364,7 @@ void catch_int(int sig)
     if(!board->is_connected())
         exit(1);
 
-    BarePosition bp;
+    BarePosition bp = board->createBarePosition();
     board->get_cur_position(bp);
     map<size_t,string>& id_string_map = board->get_coord_map();
     ostringstream os;
