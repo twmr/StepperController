@@ -64,28 +64,12 @@
     <FastJogSpeed>400</FastJogSpeed>
     <CreepSteps>50</CreepSteps>
     <Accel>10000</Accel>
-    <LowerLimit>-10000</LowerLimit>
+    <LowerLimit>0</LowerLimit>
     <UpperLimit>10000</UpperLimit>
     <Position>0</Position>
     <UnitConversion>
       <unitname>dummy</unitname>
-      <factor>0.01</factor>
-      <offset>0</offset>
-    </UnitConversion>
-  </axis>
-  <axis id="5" descriptor="z">
-    <BaseSpeed>100</BaseSpeed>
-    <SlewSpeed>250</SlewSpeed>
-    <SlowJogSpeed>100</SlowJogSpeed>
-    <FastJogSpeed>400</FastJogSpeed>
-    <CreepSteps>50</CreepSteps>
-    <Accel>10000</Accel>
-    <LowerLimit>-10000</LowerLimit>
-    <UpperLimit>10000</UpperLimit>
-    <Position>0</Position>
-    <UnitConversion>
-      <unitname>dummy</unitname>
-      <factor>0.01</factor>
+      <factor>0.1125</factor>
       <offset>0</offset>
     </UnitConversion>
   </axis>
