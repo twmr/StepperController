@@ -386,6 +386,7 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
         wxString txt = SendandReceive("set jog");
         // std::cout << "checkboxclick sj returned " << txt.c_str() << std::endl;
         axesradiobox->Show(true);
+        jogmodelayout->Layout();
 
         //TODO convert selection into axis id
         int selected = axesradiobox->GetSelection();
@@ -409,20 +410,19 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
         }
     } else
     {
-        wxString txt = SendandReceive("unset jog");
-        // std::cout << "checkboxclick usj returned " << txt.c_str() << std::endl;
         axesradiobox->Show(false);
         if (posthread->Delete() != wxTHREAD_NO_ERROR )
             wxLogError(wxT("Can't delete the thread!"));
         else
             posthread = NULL;
 
+        wxString txt = SendandReceive("unset jog");
+        // std::cout << "checkboxclick usj returned " << txt.c_str() << std::endl;
         posctrl_disable_state = true;
     }
 
     for(size_t i=0; i < get_nraxes(); ++i)
         axissc[i]->Enable(posctrl_disable_state);
-    jogmodelayout->Layout();
 }
 
 void PM301::initaxes()
@@ -504,19 +504,15 @@ void PM301::ToggleBatchMode(void)
 
     if(switchtobatch) {
         //turn batch mode on, be sure that posthread gets killed
-
-        //FIXME send (checkbox-unchecked) update signal to checkbox !
-        //ATM do posthread-killing here
-        //TODO: unset jog mode
-        if(posthread) {
-            if (posthread->Delete() != wxTHREAD_NO_ERROR )
-                wxLogError(wxT("Can't delete the position updated thread!"));
-            else
-                posthread = NULL;
+        if(checkjog->IsChecked()){
+            if(posthread) {
+                std::cout << "Toggle batch (checked)" << std::endl;
+                checkjog->SetValue(false);
+                wxCommandEvent event(wxEVT_COMMAND_CHECKBOX_CLICKED, ID_CHECKBOX);
+                this->AddPendingEvent(event);
+                jogmodelayout->Layout();
+            }
         }
-
-        //if(!checkjog->IsChecked())
-        //else
     }
     else {
         //TODO: make sure that batchthread is off!!!
@@ -649,8 +645,8 @@ void* PositionUpdateThread::Entry()
 
 void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
 {
-    wxLogWarning(wxT("Disabled at the moment"));
-    return;
+    // wxLogWarning(wxT("Disabled at the moment"));
+    // return;
 
     wxMessageDialog dialog( NULL,wxT("Are you sure that you want to reset the stepper" \
                                      " positions to zero?"),
