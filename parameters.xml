@@ -16,12 +16,13 @@
     <FastJogSpeed>400</FastJogSpeed>
     <CreepSteps>50</CreepSteps>
     <Accel>10000</Accel>
-    <LowerLimit>-1475</LowerLimit>
-    <UpperLimit>1475</UpperLimit>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>29200</UpperLimit>
+    <halfaxisturns>146</halfaxisturns>
     <Position>0</Position>
     <UnitConversion>
       <unitname>mm</unitname>
-      <factor>6.77966e-4</factor>
+      <factor>4.87401125589533E-4</factor>
       <offset>0</offset>
     </UnitConversion>
   </axis>
@@ -32,12 +33,13 @@
     <FastJogSpeed>400</FastJogSpeed>
     <CreepSteps>50</CreepSteps>
     <Accel>10000</Accel>
-    <LowerLimit>-4500</LowerLimit>
-    <UpperLimit>4500</UpperLimit>
-    <Position>1234</Position>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>29200</UpperLimit>
+    <halfaxisturns>146</halfaxisturns>
+    <Position>0</Position>
     <UnitConversion>
       <unitname>mm</unitname>
-      <factor>1.0937500e-3</factor>
+      <factor>4.90742091030622E-4</factor>
       <offset>0</offset>
     </UnitConversion>
   </axis>
@@ -50,6 +52,7 @@
     <Accel>10000</Accel>
     <LowerLimit>-14000</LowerLimit>
     <UpperLimit>14000</UpperLimit>
+    <halfaxisturns>35</halfaxisturns>
     <Position>0</Position>
     <UnitConversion>
       <unitname>deg</unitname>
