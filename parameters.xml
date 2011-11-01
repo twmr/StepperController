@@ -17,8 +17,12 @@
     <CreepSteps>50</CreepSteps>
     <Accel>10000</Accel>
     <LowerLimit>0</LowerLimit>
-    <UpperLimit>29200</UpperLimit>
-    <halfaxisturns>146</halfaxisturns>
+    <UpperLimit>0</UpperLimit>
+    <init>
+      <halfaxisturns>146</halfaxisturns>
+      <prerangefac>0.15</prerangefac>
+      <rangefac>0.50</rangefac>
+    </init>
     <Position>0</Position>
     <UnitConversion>
       <unitname>mm</unitname>
@@ -34,8 +38,12 @@
     <CreepSteps>50</CreepSteps>
     <Accel>10000</Accel>
     <LowerLimit>0</LowerLimit>
-    <UpperLimit>29200</UpperLimit>
-    <halfaxisturns>146</halfaxisturns>
+    <UpperLimit>0</UpperLimit>
+    <init>
+      <halfaxisturns>146</halfaxisturns>
+      <prerangefac>0.15</prerangefac>
+      <rangefac>0.50</rangefac>
+    </init>
     <Position>0</Position>
     <UnitConversion>
       <unitname>mm</unitname>
@@ -50,9 +58,13 @@
     <FastJogSpeed>400</FastJogSpeed>
     <CreepSteps>50</CreepSteps>
     <Accel>10000</Accel>
-    <LowerLimit>-14000</LowerLimit>
-    <UpperLimit>14000</UpperLimit>
-    <halfaxisturns>35</halfaxisturns>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>0</UpperLimit>
+    <init>
+      <halfaxisturns>35</halfaxisturns>
+      <prerangefac>4.0</prerangefac>
+      <rangefac>4.0</rangefac>
+    </init>
     <Position>0</Position>
     <UnitConversion>
       <unitname>deg</unitname>
@@ -68,8 +80,15 @@
     <CreepSteps>50</CreepSteps>
     <Accel>10000</Accel>
     <LowerLimit>0</LowerLimit>
-    <UpperLimit>10000</UpperLimit>
+    <UpperLimit>0</UpperLimit>
     <Position>0</Position>
+    <init>
+      <halfaxisturns>4</halfaxisturns>
+      <prerangefac>0.2</prerangefac>
+      <rangefac>0</rangefac>
+      <constforwardSoftLimit>550</constforwardSoftLimit>
+      <constbackwardSoftLimit>50</constbackwardSoftLimit>
+    </init>
     <UnitConversion>
       <unitname>dummy</unitname>
       <factor>0.1125</factor>
