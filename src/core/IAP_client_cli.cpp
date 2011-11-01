@@ -111,6 +111,17 @@ int main(int argc, char* argv[])
         tcp::socket s(io_service);
         s.connect(*iterator);
 
+        strcpy(request.msg, "state");
+        request.type = MSG_REQUEST;
+        boost::asio::write(s, boost::asio::buffer(reinterpret_cast<char*>(&request), msglen));
+        boost::asio::read(s, boost::asio::buffer(reinterpret_cast<char*>(&reply), msglen));
+        std::string rpl = reply.msg;
+        // cout << "state is " << reply.msg << endl;
+        if(boost::starts_with(rpl,"initialize")) {
+            cerr << "client console is disabled during initialization process" << endl;
+            return -1;
+        }
+
         if(send_single_cmd) {
             strcpy(request.msg, argv[2]);
             request.type = MSG_REQUEST;

@@ -30,25 +30,32 @@
 #include "IAPBoard.hpp"
 #include "rs232.hpp"
 
-
-Axis::Axis(const boost::property_tree::ptree &pt, IAPBoard* brd) :
-    axispt_(pt),
-    ID_(pt.get<size_t>("<xmlattr>.id")),
-    Desc_(pt.get<std::string>("<xmlattr>.descriptor")),
-    UnitName_(pt.get<std::string>("UnitConversion.unitname")),
-    UnitFactor_(pt.get<double>("UnitConversion.factor")),
-    Offset_(pt.get<BarePosition::type>("UnitConversion.offset")),
-    BaseSpeed_(pt.get<int>("BaseSpeed")),
-    SlewSpeed_(pt.get<int>("SlewSpeed")),
-    SlowJogSpeed_(pt.get<int>("SlowJogSpeed")),
-    FastJogSpeed_(pt.get<int>("FastJogSpeed")),
-    CreepSteps_(pt.get<int>("CreepSteps")),
-    Accel_(pt.get<int>("Accel")),
-    LowerLimit_(pt.get<BarePosition::type>("LowerLimit")),
-    UpperLimit_(pt.get<BarePosition::type>("UpperLimit")),
-    Position_(pt.get<BarePosition::type>("Position")),
+//TODO use refereneces or smart pointers
+Axis::Axis(const size_t id, const std::string desc, IAPBoard* brd) :
+    ID_(id),
+    Desc_(desc),
     Board_(brd)
 {
+    const boost::property_tree::ptree & pt = Board_->getConfig().getaxispt(ID_);
+    parse_vars(pt);
+}
+
+void Axis::parse_vars(const boost::property_tree::ptree & pt)
+{
+    BaseSpeed_ = pt.get<int>("BaseSpeed");
+    SlewSpeed_ = pt.get<int>("SlewSpeed");
+    SlowJogSpeed_ = pt.get<int>("SlowJogSpeed");
+    FastJogSpeed_ = pt.get<int>("FastJogSpeed");
+    CreepSteps_ = pt.get<int>("CreepSteps");
+    Accel_ = pt.get<int>("Accel");
+
+    LowerLimit_ = pt.get<BarePosition::type>("LowerLimit");
+    UpperLimit_ = pt.get<BarePosition::type>("UpperLimit");
+    Position_ = pt.get<BarePosition::type>("Position");
+
+    UnitName_ = pt.get<std::string>("UnitConversion.unitname");
+    UnitFactor_ = pt.get<double>("UnitConversion.factor");
+    Offset_ = pt.get<BarePosition::type>("UnitConversion.offset");
 }
 
 void Axis::printAxis() const
@@ -72,7 +79,7 @@ void Axis::printAxis() const
 
 // update the onchip axis configuration with the value stored in this
 // axis object
-int Axis::UpdateConfiguration() const
+int Axis::UpdateConfiguration()
 {
     char buf[32];
 
@@ -80,6 +87,9 @@ int Axis::UpdateConfiguration() const
         return -1;
 
     // TODO try catch block ?!?!?
+    const boost::property_tree::ptree & pt = Board_->getConfig().getaxispt(ID_);
+    parse_vars(pt);
+
     sprintf(buf,"1sb%ld",BaseSpeed_); Board_->send_command_quiet(buf);
     sprintf(buf,"1sv%ld",SlewSpeed_); Board_->send_command_quiet(buf);
     sprintf(buf,"1sj%ld",SlowJogSpeed_); Board_->send_command_quiet(buf);
@@ -107,8 +117,9 @@ int Axis::move_abs(const BarePosition::type abs) const
 
 
 
-IAPBoard::IAPBoard(IAPconfig& conf) :
-    connected(false),
+IAPBoard::IAPBoard(IAPconfig& conf, const bool initialize=false) :
+    init_(initialize),
+    connected_(false),
     serial_interface(STD_TR1::shared_ptr< RS232 >(new sctl_ctb(conf.GetParameters("rs232")))),
     config_(conf),
     coordinate_map(),
@@ -126,9 +137,12 @@ IAPBoard::IAPBoard(IAPconfig& conf) :
 
     try {
         BOOST_FOREACH(const ptree::value_type & v, config_.GetParameters()) {
-            if(v.first.data() != string("axis")) continue;
+            if(v.first.data() != string("axis"))
+                continue;
 
-            axes.push_back(Axis(v.second, this));
+            size_t id = v.second.get<size_t>("<xmlattr>.id");
+            std::string desc = v.second.get<std::string>("<xmlattr>.descriptor");
+            axes.push_back(Axis(id, desc, this));
             std::cout << "parsing axis "<< axes.back().get_id() << "  : " << axes.back().get_desc() << endl;
 
             //creating bidirectional maps for axis descriptor <-> axis id conversion
@@ -150,7 +164,7 @@ IAPBoard::IAPBoard(IAPconfig& conf) :
 
 IAPBoard::~IAPBoard()
 {
-    if(connected)
+    if(is_connected())
         disconnect();
 }
 
@@ -179,7 +193,7 @@ void IAPBoard::connect()
     send_command_quiet("1CH1"); // set axis 1
     send_command_quiet("1IR"); // disable jog mode
 
-    connected = true;
+    connected_ = true;
 }
 
 
@@ -191,7 +205,7 @@ void IAPBoard::disconnect()
     /* disconnection commands */
     /* TODO */
 
-    connected = false;
+    connected_ = false;
 }
 
 //removes junk characters from messages which are sent back from the PM381 controller
@@ -380,8 +394,21 @@ void IAPBoard::RestoreEnvironment() const
 
 int IAPBoard::initAxes()
 {
-    for(const_axesiter it = axes.begin(); it != axes.end(); ++it)
+    for(axesiter it = axes.begin(); it != axes.end(); ++it)
     {
+        if(init_) {
+            config_.setAxisElement<BarePosition::type>(it->get_id(),"Position", 0);
+            config_.setAxisElement<BarePosition::type>(it->get_id(),"UnitConversion.offset", 0);
+            size_t halfturns = config_.getAxisElement<size_t>(it->get_id(),"init.halfaxisturns");
+            double rangefac = config_.getAxisElement<double>(it->get_id(),"init.prerangefac");
+            // double unitfac = getConfig().getAxisElement<BarePosition::type>(it->get_id(),"UnitConversion.factor");
+            BarePosition::type newupperSL = static_cast<BarePosition::type>(floor((rangefac/2.0)*halfturns*200));
+            BarePosition::type newlowerSL = -newupperSL;
+            std::cout << "lowerSL: " << newlowerSL << " is [halfturns] " << newlowerSL/200.0
+                      << "; upperSL: " << newupperSL << " is [halfturns]: " << newupperSL/200.0 << std::endl;
+            config_.setAxisElement<BarePosition::type>(it->get_id(),"LowerLimit", newlowerSL);
+            config_.setAxisElement<BarePosition::type>(it->get_id(),"UpperLimit", newupperSL);
+        }
         it->UpdateConfiguration();
         it->printAxis();
     }
@@ -551,7 +578,7 @@ void IAPBoard::get_upper_softlimits(Position& retsl) const
   //const std::map<size_t,std::string>& id_string_map = get_coord_map();
   for(const_axesiter it = axes.begin(); it != axes.end(); ++it) {
     retsl.SetCoordinate(it->get_id(),
-                        getConfig().getAxisElement<int>(it->get_id(),"UpperLimit") *
+                        config_.getAxisElement<BarePosition::type>(it->get_id(),"UpperLimit") *
                         it->get_factor());
   }
 
@@ -562,7 +589,7 @@ void IAPBoard::get_lower_softlimits(Position& retsl) const
   //const std::map<size_t,std::string>& id_string_map = get_coord_map();
   for(const_axesiter it = axes.begin(); it != axes.end(); ++it) {
     retsl.SetCoordinate(it->get_id(),
-                        getConfig().getAxisElement<int>(it->get_id(),"LowerLimit") *
+                        config_.getAxisElement<BarePosition::type>(it->get_id(),"LowerLimit") *
                         it->get_factor());
   }
 }
@@ -581,7 +608,53 @@ int IAPBoard::SetZero()
     get_cur_position(bp);
     for(auto& axis : axes) {
         axis.SetOffset(bp.GetCoordinate(axis.get_id()));
-        getConfig().setAxisElement<int>(axis.get_id(),"UnitConversion.offset",bp.GetCoordinate(axis.get_id()));
+        config_.setAxisElement<BarePosition::type>(axis.get_id(),"UnitConversion.offset",bp.GetCoordinate(axis.get_id()));
     }
+    return 0;
+}
+
+
+int IAPBoard::SetInitialZero()
+{
+    if(!state())
+    {
+        std::cerr << "SetInitialZero only in initialize mode allowed!" << std::endl;
+        return -1;
+    }
+
+    std::cout << "board: initialization: create final parameters.xml file (soft limits set correctly)"
+              << std::endl;
+
+    BarePosition bp = createBarePosition();
+    get_cur_position(bp);
+    for(auto& axis : axes) {
+        config_.setAxisElement<BarePosition::type>(axis.get_id(),"Position", 0);
+        config_.setAxisElement<BarePosition::type>(axis.get_id(),"UnitConversion.offset", 0);
+
+        size_t halfturns = config_.getAxisElement<size_t>(axis.get_id(),"init.halfaxisturns");
+        double rangefac = config_.getAxisElement<double>(axis.get_id(),"init.rangefac");
+        BarePosition::type upperSL,lowerSL;
+        if(!rangefac)
+        {
+            // for axes with non-symmetric upper and lower softlimits
+            std::cout << "using forward and backward softlimit" << std::endl;
+            upperSL = config_.getAxisElement<double>(axis.get_id(),"init.constforwardSoftLimit");
+            lowerSL = -1*config_.getAxisElement<double>(axis.get_id(),"init.constbackwardSoftLimit");
+        }
+        else{
+            //symmetric upper and lower softlimits
+            upperSL = static_cast<BarePosition::type>(floor((rangefac/2.0)*halfturns*200));
+            lowerSL = -upperSL;
+        }
+        std::cout << "lowerSL: " << lowerSL << " is [halfturns] " << lowerSL/200.0
+                  << "; upperSL: " << upperSL << " is [halfturns]: " << upperSL/200.0 << std::endl;
+        config_.setAxisElement<BarePosition::type>(axis.get_id(),"UpperLimit", upperSL);
+        config_.setAxisElement<BarePosition::type>(axis.get_id(),"LowerLimit", lowerSL);
+        axis.UpdateConfiguration();
+    }
+
+    // INITIALISATION DONE -> clear flag
+    init_ = false;
+    std::cout << "board: done with initailization" << std::endl;
     return 0;
 }

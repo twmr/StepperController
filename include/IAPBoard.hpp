@@ -28,6 +28,7 @@
 #include "global.hpp"
 #include "position.hpp"
 #include <iostream>
+#include <stdexcept>
 
 typedef enum{
     E_DUMMY=0,
@@ -51,7 +52,7 @@ class IAPBoard;
 class Axis
 {
 public:
-    Axis(const boost::property_tree::ptree &, IAPBoard*);
+    Axis(const size_t id, const std::string desc, IAPBoard*);
     ~Axis() {};
     size_t get_id() const { return ID_; };
     std::string get_desc() const { return Desc_; };
@@ -60,15 +61,17 @@ public:
     BarePosition::type GetOffset() const { return Offset_; };
     double get_factor() const { return UnitFactor_; };
     void printAxis(void) const;
-    int UpdateConfiguration(void) const;
+    int UpdateConfiguration(void);
 
     int move_rel(const BarePosition::type) const;
     int move_abs(const BarePosition::type) const;
 
 private:
-    boost::property_tree::ptree axispt_;
+    void parse_vars(const boost::property_tree::ptree & pt);
+
     size_t ID_;
     std::string Desc_;
+
     std::string UnitName_;
     double UnitFactor_;
     BarePosition::type Offset_;
@@ -81,6 +84,8 @@ private:
     BarePosition::type LowerLimit_;
     BarePosition::type UpperLimit_;
     BarePosition::type Position_;
+
+    //TODO smart ptr ?!?!
     IAPBoard* Board_;
 };
 
@@ -107,6 +112,23 @@ public:
 
     template <class T>
     void set(const std::string &s, T value) const { return params_.put(s, value); };
+
+    const boost::property_tree::ptree& getaxispt(const size_t id) const {
+        BOOST_FOREACH(const boost::property_tree::ptree::value_type & v,
+                      params_.get_child("config")) {
+            if(v.first.data() != std::string("axis"))
+                continue;
+
+            size_t axnr = v.second.get<size_t>("<xmlattr>.id");
+            if( id == axnr )
+                return v.second;
+        }
+
+        std::cerr << "warning: (axis: "<< id << ") "
+                  << "not found in property tree" << std::endl;
+        throw std::invalid_argument("bad axis id");
+    }
+
 
     template <class T>
     void setAxisElement(const size_t axnr, const std::string& element, const T value) {
@@ -160,7 +182,7 @@ private:
 
 class IAPBoard {
 public:
-    IAPBoard(IAPconfig &);
+    IAPBoard(IAPconfig &, bool);
     ~IAPBoard();
 
     int send_command(const std::string &, char* reply) const;
@@ -187,8 +209,11 @@ public:
 
     IAPconfig& getConfig() const { return config_; };
 
-    bool is_connected() { return connected; };
+    bool is_connected() const { return connected_; };
+    bool state() const { return init_; };
+
     int SetZero();
+    int SetInitialZero();
 
     size_t GetNrOfAxes(void) const { return axes.size(); };
 
@@ -243,7 +268,9 @@ private:
     int save_setaxisnum(const size_t) const;
     std::string strip_ctrl_junk(const std::string&) const;
     std::string send_lowlevel(const std::string&) const;
-    bool connected;
+
+    bool init_;
+    bool connected_;
     STD_TR1::shared_ptr< RS232 > serial_interface;
 
     //TODO use this mutex

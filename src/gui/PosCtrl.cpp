@@ -111,6 +111,8 @@ void PosCtrl::OnKeyDown( wxKeyEvent& event )
 
 void PosCtrl::PositionUpdate()
 {
+    //wxWindowDisabler disableAll;
+    wxBusyCursor wait;
     wxString text;
     text.Printf("ma %s=%f", *ref_.coords[GetAxisIdx()], GetDoubleValue());
     std::cout << "command to update pos: " << text.c_str() << std::endl;
@@ -126,6 +128,8 @@ void PosCtrl::PositionUpdate()
 
     // always update position after a "ma" call
     Position cp = ref_.getcurpos();
+    // to test busycursor
+    // sleep(2);
     SetDoubleValue(cp.GetCoordinate(GetAxisIdx()+1));
 }
 

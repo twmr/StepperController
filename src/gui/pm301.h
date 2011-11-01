@@ -66,6 +66,7 @@ class PositionUpdateThread;
 ////@end control identifiers
 
 #define ID_AXESRADIOBOX 8999
+#define ID_INITIALIZE_BUTTON 9000
 // #define ID_BITMAPBUTTONS 8899
 #define SOCKET_ID 9980
 
@@ -120,6 +121,7 @@ public:
     void OnSocketEvent( wxSocketEvent& event );
     // void OnBitmapbuttonClick( wxCommandEvent& event );
     void OnRadioboxSelected( wxCommandEvent& event );
+    void OnButtonAcceptandquit( wxCommandEvent& event );
 
 ////@begin PM301 member function declarations
 
@@ -189,6 +191,7 @@ private:
     wxSocketClient* s;
     msg_t request, reply;
     PositionUpdateThread *posthread;
+    bool initialize;
     Position cp_;
     mutable wxMutex m_mutex;
     mutable wxMutex m_tcpmutex;

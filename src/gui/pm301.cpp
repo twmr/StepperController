@@ -58,6 +58,8 @@ BEGIN_EVENT_TABLE( PM301, wxFrame )
 
     // EVT_SOCKET(SOCKET_ID, PM301::OnSocketEvent )
 
+    EVT_BUTTON( ID_INITIALIZE_BUTTON, PM301::OnButtonAcceptandquit )
+
     EVT_RADIOBOX( ID_AXESRADIOBOX, PM301::OnRadioboxSelected )
 
 END_EVENT_TABLE()
@@ -123,6 +125,7 @@ void PM301::Init()
     batchmodetextctl = NULL;
 ////@end PM301 member initialisation
     posthread=NULL;
+    initialize = false;
 
 #ifndef DEBUG_STANDALONE
     std::cout << "connecting to localhost" << std::endl;
@@ -148,6 +151,7 @@ void PM301::Init()
         std::cerr << "connection failure" << std::endl;
         exit(1);
     }
+
 #endif
 }
 
@@ -263,6 +267,14 @@ void PM301::CreateControls()
     //retreive nr. of axes and coordinate names from the server
     initaxes();
 
+    initialize = ( SendandReceive("state") == "initialize" );
+    if(initialize) {
+        wxMessageBox(wxT("It is assumed that the all controlled axes are in the middle of the ranges"),
+                     wxT("Warning"),
+                     wxOK | wxICON_INFORMATION, this);
+    }
+
+
     const Position initpos = getcurpos();
     set_cp(initpos);
     wxArrayString axesradioboxStrings;
@@ -293,6 +305,18 @@ void PM301::CreateControls()
 
         axesradioboxStrings.Add(wxString::Format("&%s",*coords[i]));
     }
+
+    if(initialize) {
+        wxButton* accept_and_quit = new wxButton( itemFrame1, ID_INITIALIZE_BUTTON,
+                                                  _("Accept Zero Position and quit"), wxDefaultPosition, wxDefaultSize, 0 );
+        itemBoxSizer8->Clear(true);
+        itemBoxSizer8->Add(accept_and_quit, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+        // itemButton9->Show(false);
+        // itemButton10->Show(false);
+
+
+    }
+
 
     axesradiobox = new wxRadioBox( itemFrame1, ID_AXESRADIOBOX, _("Axis"), wxDefaultPosition,
                                    wxDefaultSize, axesradioboxStrings, 1, wxRA_SPECIFY_COLS );
@@ -695,4 +719,14 @@ void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
 void PM301::OnButtonSavexmlClick( wxCommandEvent& event )
 {
     SendandReceive("savexml");
+}
+
+
+void PM301::OnButtonAcceptandquit( wxCommandEvent& event )
+{
+    SendandReceive("initialzero");
+    SendandReceive("savexml");
+    wxMessageBox(wxT("Initialization done: GUI is about to close, please restart GUI"), wxT("Info"),
+                     wxOK | wxICON_INFORMATION, this);
+    Close(true);
 }

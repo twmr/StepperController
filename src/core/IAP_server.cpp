@@ -126,15 +126,36 @@ namespace IAPServer
                 prepare_tcp_success_message();
         }
 #endif
-        // else if(! data.compare("serialtest")) {
-        //     // fixme lock this
-        //     board->test(message.msg);
-        // }
         else if(! data.compare("close")) {
             prepare_tcp_message("stopping current session");
             //FIXME
             //delete new_session;
         }
+
+
+
+        // INITIALISATION STUFF //
+        // this command is only used in the GUI
+        else if(! data.compare("state")) {
+            bool init = board->state();
+            if(init)
+                prepare_tcp_message("initialize");
+            else
+                prepare_tcp_message("normal");
+        }
+        else if(! data.compare("initialzero")) {
+            bool init = board->state();
+            if(!init) {
+                prepare_tcp_err_message("initialzero not allowed in normal mode");
+                return;
+            }
+            board->SetInitialZero();
+            prepare_tcp_success_message();
+        }
+        // END INITIALISATION STUFF //
+
+
+
         else if(! data.compare("pbp")) {
             //print bare positions
             BarePosition bp = board->createBarePosition();
@@ -186,31 +207,31 @@ namespace IAPServer
             prepare_tcp_message(os.str());
         }
         else if (! data.compare("psl")) {
-	    //print soft limits
+            //print soft limits
             Position lsl = board->createPosition();
-	    Position usl = board->createPosition();
+            Position usl = board->createPosition();
 
             board->get_lower_softlimits(lsl);
             board->get_upper_softlimits(usl);
 
-	    map<size_t,string>& id_string_map = board->get_coord_map();
-	    map<size_t,string>& id_unit_map = board->get_unit_map(); 
-	    ostringstream os;
+            map<size_t,string>& id_string_map = board->get_coord_map();
+            map<size_t,string>& id_unit_map = board->get_unit_map();
+            ostringstream os;
 
             os << "upper softlimits:" << endl;
             usl.GetPositionString(message.msg, id_string_map, id_unit_map);
-	    os << message.msg;
+            os << message.msg;
             // for(Position::coord_type::const_iterator
-	    // 	  it = usl.begin(); it != usl.end(); ++it) {
-	    //   os << "\t\'" << id_string_map[it->first] << "\'=" << usl.GetCoordinate(it->first) << endl;
+            //   it = usl.begin(); it != usl.end(); ++it) {
+            //   os << "\t\'" << id_string_map[it->first] << "\'=" << usl.GetCoordinate(it->first) << endl;
             // }
 
             os << "\nlower softlimits:" << endl;
             lsl.GetPositionString(message.msg, id_string_map, id_unit_map);
-	    os << message.msg;
-	    // for(Position::coord_type::const_iterator
-	    // 	  it = lsl.begin(); it != lsl.end(); ++it) {
-	    //   os << "\t\'" << id_string_map[it->first] << "\'=" << lsl.GetCoordinate(it->first) << endl;
+            os << message.msg;
+            // for(Position::coord_type::const_iterator
+            //   it = lsl.begin(); it != lsl.end(); ++it) {
+            //   os << "\t\'" << id_string_map[it->first] << "\'=" << lsl.GetCoordinate(it->first) << endl;
             // }
 
             prepare_tcp_message(os.str());
@@ -387,12 +408,14 @@ void catch_int(int sig)
 int main(int argc, char** argv)
 {
     string configfilename("parameters.xml");
+    bool initialize = false;
 
     // Read command line arguments
     try {
         po::options_description desc("Allowed options");
         desc.add_options()
             ("help,h", "produce help message")
+            ("initialize,i", po::value<bool>(&initialize), "is used to find and set the zero position of the stepperhardware")
             ("parameters,f", po::value(&configfilename),
              "xml file containing the parameters for the steppermotor hardware");
 
@@ -427,7 +450,7 @@ int main(int argc, char** argv)
     try
     {
         cout << "SERVER: init IAPBoard" << endl;
-        board = STD_TR1::shared_ptr<IAPBoard>(new IAPBoard(config));
+        board = STD_TR1::shared_ptr<IAPBoard>(new IAPBoard(config, initialize));
         cout << "SERVER: init IAPBoard done" << endl;
 
         signal(SIGINT, catch_int);
