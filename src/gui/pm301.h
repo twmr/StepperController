@@ -153,6 +153,7 @@ public:
     wxVector<wxStaticText*> axisst;
     wxVector<wxBoxSizer*> axisbs;
     wxRadioBox* axesradiobox;
+    wxButton *accept_and_quit;
 
     Position getcurpos();
     void initaxes();

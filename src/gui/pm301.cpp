@@ -126,6 +126,7 @@ void PM301::Init()
 ////@end PM301 member initialisation
     posthread=NULL;
     initialize = false;
+    accept_and_quit = NULL;
 
 #ifndef DEBUG_STANDALONE
     std::cout << "connecting to localhost" << std::endl;
@@ -307,14 +308,10 @@ void PM301::CreateControls()
     }
 
     if(initialize) {
-        wxButton* accept_and_quit = new wxButton( itemFrame1, ID_INITIALIZE_BUTTON,
+        accept_and_quit = new wxButton( itemFrame1, ID_INITIALIZE_BUTTON,
                                                   _("Accept Zero Position and quit"), wxDefaultPosition, wxDefaultSize, 0 );
         itemBoxSizer8->Clear(true);
         itemBoxSizer8->Add(accept_and_quit, 1, wxALIGN_CENTER_VERTICAL|wxALL, 5);
-        // itemButton9->Show(false);
-        // itemButton10->Show(false);
-
-
     }
 
 
@@ -407,6 +404,9 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
     bool posctrl_disable_state = false;
 
     if(checkjog->IsChecked()) {
+        if(initialize) {
+            accept_and_quit->Enable(false);
+        }
         wxString txt = SendandReceive("set jog");
         // std::cout << "checkboxclick sj returned " << txt.c_str() << std::endl;
         axesradiobox->Show(true);
@@ -434,6 +434,9 @@ void PM301::OnCheckboxClick( wxCommandEvent& event )
         }
     } else
     {
+        if(initialize) {
+            accept_and_quit->Enable(true);
+        }
         axesradiobox->Show(false);
         if (posthread->Delete() != wxTHREAD_NO_ERROR )
             wxLogError(wxT("Can't delete the thread!"));
@@ -724,9 +727,16 @@ void PM301::OnButtonSavexmlClick( wxCommandEvent& event )
 
 void PM301::OnButtonAcceptandquit( wxCommandEvent& event )
 {
-    SendandReceive("initialzero");
-    SendandReceive("savexml");
+    {
+        wxBusyCursor wait;
+        SendandReceive("initialzero");
+        SendandReceive("savexml");
+    }
+
     wxMessageBox(wxT("Initialization done: GUI is about to close, please restart GUI"), wxT("Info"),
                      wxOK | wxICON_INFORMATION, this);
+
+    //read reantrancy ?!?!
+    //sleep(3);
     Close(true);
 }
