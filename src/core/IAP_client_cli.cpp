@@ -46,8 +46,10 @@ int main(int argc, char* argv[])
     string serverhostname("localhost");
     string serverport("16000"); //string is ok here
     string batch;
+    string cmd;
     bool batch_mode = false;
     vector<string> batchcmds;
+    bool send_single_cmd = false;
 
     // Read command line arguments
     try {
@@ -59,7 +61,9 @@ int main(int argc, char* argv[])
             ("serverport,p", po::value(&serverport),
              "portname of the server")
             ("batchfile,b", po::value<string>(),
-             "name of the batchfile to execute on the steppermotor hardware");
+             "name of the batchfile to execute on the steppermotor hardware")
+            ("cmd,c", po::value<string>(),
+             "only send a single command to the sever, cmd needs to be put in parenthesis");
 
         po::variables_map vm;
         po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -86,20 +90,18 @@ int main(int argc, char* argv[])
             copy(tok.begin(), tok.end(), back_inserter(batchcmds));
             batch_mode = true;
         }
+        if (vm.count("cmd")) {
+            send_single_cmd = true;
+            cmd = vm["cmd"].as<string>();
+        }
     }
     catch(exception& e) {
         cerr << "error: " << e.what() << "\n";
         return 1;
     }
 
-
-    //TODO readd single cmd mode!
-
     try
     {
-        string cmd;
-
-        bool send_single_cmd = false;
         msg_t request, reply;
 
         boost::asio::io_service io_service;
@@ -123,7 +125,8 @@ int main(int argc, char* argv[])
         }
 
         if(send_single_cmd) {
-            strcpy(request.msg, argv[2]);
+            cout << "sending cmd \"" << cmd << "\" to server" << endl;
+            strcpy(request.msg, cmd.c_str());
             request.type = MSG_REQUEST;
             boost::asio::write(s, boost::asio::buffer(reinterpret_cast<char*>(&request), msglen));
             boost::asio::read(s, boost::asio::buffer(reinterpret_cast<char*>(&reply), msglen));
