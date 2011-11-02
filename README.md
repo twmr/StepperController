@@ -134,8 +134,6 @@ TODO:
 * use Exceptions inside the IAPBoard and catch them inside the Server
 * improve error handling in the C++ code
 * implement wait command
-* remove Multiplier xml element from parameters.xml
 * Windows build support
 * generalize the client and server programs
-* Documentation
 * Linux: libreadline support for the client terminal
