@@ -87,11 +87,11 @@
       <prerangefac>0.2</prerangefac>
       <rangefac>0</rangefac>
       <constforwardSoftLimit>550</constforwardSoftLimit>
-      <constbackwardSoftLimit>50</constbackwardSoftLimit>
+      <constbackwardSoftLimit>75</constbackwardSoftLimit>
     </init>
     <UnitConversion>
-      <unitname>dummy</unitname>
-      <factor>0.1125</factor>
+      <unitname>deg</unitname>
+      <factor>-0.1125</factor>
       <offset>0</offset>
     </UnitConversion>
   </axis>
