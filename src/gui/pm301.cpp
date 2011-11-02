@@ -291,9 +291,13 @@ void PM301::CreateControls()
                                      wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER));
 
         //axisbb.push_back(new wxBitmapButton(posSizer->GetStaticBox(), ID_BITMAPBUTTONS+i,
-        //                                    wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW));
+        //wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW));
 
-        axissc[i]->SetIncrement(0.02);
+        double incr=0.02;
+        if(*coords[i]=="phi")
+            incr=2.0;
+
+        axissc[i]->SetIncrement(incr);
         //TODO
         //axissc[i]->SetDigits(4);
 
