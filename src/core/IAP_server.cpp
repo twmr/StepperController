@@ -415,7 +415,7 @@ int main(int argc, char** argv)
         po::options_description desc("Allowed options");
         desc.add_options()
             ("help,h", "produce help message")
-            ("initialize,i", po::value<bool>(&initialize), "is used to find and set the zero position of the stepperhardware")
+            ("initialize,i", "is used to find and set the zero position (origin of the global coordinate system) of the steppermotor-hardware")
             ("parameters,f", po::value(&configfilename),
              "xml file containing the parameters for the steppermotor hardware");
 
@@ -427,6 +427,8 @@ int main(int argc, char** argv)
             cout << desc << "\n";
             return 1;
         }
+        if (vm.count("initialize"))
+            initialize = true;
     }
     catch(exception& e) {
         cerr << "error: " << e.what() << "\n";
