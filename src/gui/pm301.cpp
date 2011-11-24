@@ -389,7 +389,7 @@ const wxString PM301::SendandReceive(const wxString& msgstr)
  * wxEVT_COMMAND_RADIOBOX_SELECTED event handler for ID_AXESRADIOBOX
  */
 
-void PM301::OnRadioboxSelected( wxCommandEvent& event )
+void PM301::OnRadioboxSelected( wxCommandEvent& WXUNUSED(event) )
 {
     int selected = axesradiobox->GetSelection();
     wxString text;
@@ -403,7 +403,7 @@ void PM301::OnRadioboxSelected( wxCommandEvent& event )
  * wxEVT_COMMAND_CHECKBOX_CLICKED event handler for ID_CHECKBOX
  */
 
-void PM301::OnCheckboxClick( wxCommandEvent& event )
+void PM301::OnCheckboxClick( wxCommandEvent& WXUNUSED(event) )
 {
     bool posctrl_disable_state = false;
 
@@ -576,7 +576,7 @@ void PM301::UpdateGUIpositions(void)
  * wxEVT_LEFT_DOWN event handler for ID_BUTTON1
  */
 
-void PM301::LeaveBatchModeButtonPressed( wxMouseEvent& event )
+void PM301::LeaveBatchModeButtonPressed( wxMouseEvent& WXUNUSED(event) )
 {
     ToggleBatchMode();
 }
@@ -586,7 +586,7 @@ void PM301::LeaveBatchModeButtonPressed( wxMouseEvent& event )
  * wxEVT_LEFT_DOWN event handler for ID_BUTTON
  */
 
-void PM301::LoadBatchFileDialog( wxMouseEvent& event )
+void PM301::LoadBatchFileDialog( wxMouseEvent& WXUNUSED(event) )
 {
     wxFileDialog dialog(GetParent(), _T("choose a file"), wxEmptyString, wxEmptyString,
                         _T("Batch Files (*.bat)|*.bat"), wxFD_OPEN);
@@ -607,7 +607,7 @@ void PM301::LoadBatchFileDialog( wxMouseEvent& event )
  * wxEVT_COMMAND_MENU_SELECTED event handler for ID_MENUITEM1
  */
 
-void PM301::OnMenuitem1Click( wxCommandEvent& event )
+void PM301::OnMenuitem1Click( wxCommandEvent& WXUNUSED(event) )
 {
     ToggleBatchMode();
 }
@@ -674,7 +674,7 @@ void* PositionUpdateThread::Entry()
  * wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BUTTON3
  */
 
-void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
+void PM301::OnButtonZeroPositionClick( wxCommandEvent& WXUNUSED(event) )
 {
     // wxLogWarning(wxT("Disabled at the moment"));
     // return;
@@ -723,13 +723,13 @@ void PM301::OnButtonZeroPositionClick( wxCommandEvent& event )
  * wxEVT_COMMAND_BUTTON_CLICKED event handler for ID_BUTTON_SAVEXML
  */
 
-void PM301::OnButtonSavexmlClick( wxCommandEvent& event )
+void PM301::OnButtonSavexmlClick( wxCommandEvent& WXUNUSED(event) )
 {
     SendandReceive("savexml");
 }
 
 
-void PM301::OnButtonAcceptandquit( wxCommandEvent& event )
+void PM301::OnButtonAcceptandquit( wxCommandEvent& WXUNUSED(event) )
 {
     {
         wxBusyCursor wait;

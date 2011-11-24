@@ -134,7 +134,7 @@ void PosCtrl::PositionUpdate()
 }
 
 
-void PosCtrl::OnEnter( wxCommandEvent& event )
+void PosCtrl::OnEnter( wxCommandEvent& WXUNUSED(event) )
 {
     PositionUpdate();
 }
