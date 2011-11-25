@@ -33,6 +33,9 @@
 #include <boost/tokenizer.hpp>
 namespace po = boost::program_options;
 
+#include <readline/readline.h>
+#include <readline/history.h>
+
 #include "global.hpp"
 #include "IAP_server.hpp"
 
@@ -135,9 +138,8 @@ int main(int argc, char* argv[])
         }
 
         while(true) {
-            cout << "#> ";
-
             if(batch_mode) {
+                cout << "#> ";
                 if(!batchcmds.size())
                     break;
                 cmd = batchcmds.front();
@@ -146,7 +148,14 @@ int main(int argc, char* argv[])
             } else
             {
                 // interactive mode
-                cin.getline(request.msg, MSGSIZE);
+
+                strncpy(request.msg, readline("$>"), MSGSIZE);
+                if(request.msg && *request.msg)
+                    add_history(request.msg);
+                // else
+                //     cout << "entered line empty" << endl;
+
+                //cin.getline(request.msg, MSGSIZE);
                 cmd=request.msg;
 
                 if(!cmd.compare("quit") || !cmd.compare("q")) {
@@ -157,7 +166,6 @@ int main(int argc, char* argv[])
 
             if(!cmd.length()) // empty string
                 continue;
-
 
             try {
                 if (boost::starts_with(cmd, "sleep ")) {

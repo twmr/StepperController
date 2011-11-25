@@ -10,6 +10,9 @@ find_package( Boost 1.44 COMPONENTS filesystem program_options system)
 include_directories ( ${Boost_INCLUDE_DIRS} )
 link_directories ( ${Boost_LIBRARY_DIRS} )
 
+#TODO: find solution for systems/platforms without a readline lib
+find_package( Readline REQUIRED)
+
 find_package( CTB REQUIRED)
 include_directories( ${CTB_INCLUDE_DIRS} )
 message( STATUS "CTB_INCLUDE_DIRS = ${CTB_INCLUDE_DIRS}" )

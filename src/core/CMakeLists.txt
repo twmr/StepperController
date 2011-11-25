@@ -18,4 +18,5 @@ add_executable(
 	moves_client_cli
 		IAP_client_cli.cpp
 )
-target_link_libraries(moves_client_cli ${CTB_LIBRARY} boost_system boost_program_options pthread)
+target_link_libraries(moves_client_cli ${CTB_LIBRARY} boost_system
+	boost_program_options pthread readline)

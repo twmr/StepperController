@@ -136,4 +136,3 @@ TODO:
 * implement wait command
 * Windows build support
 * generalize the client and server programs
-* Linux: libreadline support for the client terminal
