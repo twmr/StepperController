@@ -38,6 +38,8 @@ namespace po = boost::program_options;
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#include <signal.h> //FIXME not available for non unix systems
+
 #include "global.hpp"
 #include "rs232.hpp"
 
@@ -118,6 +120,11 @@ string send_lowlevel(STD_TR1::shared_ptr< RS232 >& sinf, string sendcmd)
     return std::string(buffer);
 }
 
+void catch_int(int sig)
+{
+    write_history(".egun.hist");
+    exit(0);
+}
 
 int main(int argc, char* argv[])
 {
@@ -177,6 +184,8 @@ int main(int argc, char* argv[])
     {
         egunconfig config(configfile);
         STD_TR1::shared_ptr< RS232 > serial_interface(new sctl_ctb(config.GetParameters("rs232")));
+        read_history(".egun.hist");
+        signal(SIGINT, catch_int);
 
         serial_interface->open();
         if(send_single_cmd) {
@@ -196,17 +205,15 @@ int main(int argc, char* argv[])
                 // interactive mode
 
                 cmd = readline("$>");
-                if(cmd.length())
-                    add_history(cmd.c_str());
-                // else
-                //     cout << "entered line empty" << endl;
 
-                //cin.getline(request.msg, MSGSIZE);
 
                 if(!cmd.compare("quit") || !cmd.compare("q")) {
                     /* disconnect from tcp/ip server */
                     break;
                 }
+
+                if(cmd.length())
+                    add_history(cmd.c_str());
             }
 
             if(!cmd.length()) // empty string
@@ -219,13 +226,14 @@ int main(int argc, char* argv[])
             // else
             // cout << send_lowlevel(serial_interface, cmd) << endl;
             string rpl = send_lowlevel(serial_interface, cmd);
-            for(size_t i=0; i < rpl.length(); ++i) {
-                cout << i << ":\t" << static_cast<int>(rpl[i]);
-                if(rpl[i] > 31 && rpl[i] != 127)
-                    cout << " " << rpl[i] << endl;
-                else
-                    cout << endl;
-            }
+            cout << rpl << endl;
+            // for(size_t i=0; i < rpl.length(); ++i) {
+            //     cout << i << ":\t" << static_cast<int>(rpl[i]);
+            //     if(rpl[i] > 31 && rpl[i] != 127)
+            //         cout << " " << rpl[i] << endl;
+            //     else
+            //         cout << endl;
+            // }
 
 
         }
@@ -234,5 +242,6 @@ int main(int argc, char* argv[])
         cerr << "Exception: " << e.what() << endl;
     }
 
+    write_history(".egun.hist");
     return 0;
 }

@@ -36,12 +36,20 @@ namespace po = boost::program_options;
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#include <signal.h>
+
 #include "global.hpp"
 #include "IAP_server.hpp"
 
 
 using boost::asio::ip::tcp;
 using namespace std;
+
+void catch_int(int sig)
+{
+    write_history(".stepper.hist");
+    exit(0);
+}
 
 int main(int argc, char* argv[])
 {
@@ -116,6 +124,9 @@ int main(int argc, char* argv[])
         tcp::socket s(io_service);
         s.connect(*iterator);
 
+        read_history(".stepper.hist");
+        signal(SIGINT, catch_int);
+
         strcpy(request.msg, "state");
         request.type = MSG_REQUEST;
         boost::asio::write(s, boost::asio::buffer(reinterpret_cast<char*>(&request), msglen));
@@ -150,18 +161,15 @@ int main(int argc, char* argv[])
                 // interactive mode
 
                 strncpy(request.msg, readline("$>"), MSGSIZE);
-                if(request.msg && *request.msg)
-                    add_history(request.msg);
-                // else
-                //     cout << "entered line empty" << endl;
-
-                //cin.getline(request.msg, MSGSIZE);
                 cmd=request.msg;
 
                 if(!cmd.compare("quit") || !cmd.compare("q")) {
                     /* disconnect from tcp/ip server */
                     break;
                 }
+
+                if(request.msg && *request.msg)
+                    add_history(request.msg);
             }
 
             if(!cmd.length()) // empty string
@@ -199,6 +207,8 @@ int main(int argc, char* argv[])
     } catch (exception& e) {
         cerr << "Exception: " << e.what() << endl;
     }
+
+    write_history(".stepper.hist");
 
     return 0;
 }
