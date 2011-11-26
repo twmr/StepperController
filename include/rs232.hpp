@@ -40,6 +40,8 @@ public:
     virtual void close() = 0;
     virtual size_t send(const char *buf, ssize_t n) = 0;
     virtual size_t receive(char *buf, const ssize_t n) = 0;
+    virtual std::string get_eos() const = 0;
+    virtual unsigned int get_timeout() const = 0;
 
     int rslog(const std::string & logstring, const std::string prefix = "");
 private:
@@ -53,15 +55,17 @@ public:
     ~sctl_ctb() {};
     void open();
     void close();
-    //int send() {};
-    //int receive() {};
     size_t send(const char *buf, const ssize_t n);
     size_t receive(char *buf, const ssize_t n);
+    std::string get_eos() const { return eos; };
+    unsigned int get_timeout() const { return timeout; };
 
 private:
     const std::string devicename;
     const int baudrate;
     const std::string protocol;
+    std::string eos;
+    const unsigned int timeout;
 
     STD_TR1::shared_ptr< ctb::SerialPort > serialPort;
     STD_TR1::shared_ptr< ctb::IOBase > device;

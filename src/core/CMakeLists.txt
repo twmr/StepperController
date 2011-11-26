@@ -20,3 +20,12 @@ add_executable(
 )
 target_link_libraries(moves_client_cli ${CTB_LIBRARY} boost_system
 	boost_program_options pthread readline)
+
+add_executable(
+  moves_egun_cli
+  rs232.cpp
+  ctb.cpp
+  egun_cli.cpp
+)
+target_link_libraries(moves_egun_cli ${CTB_LIBRARY} boost_system
+	boost_program_options pthread readline)

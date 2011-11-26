@@ -23,19 +23,31 @@ int main(int argc, char *argv[])
         serialPort.set_option(serial_port::stop_bits(serial_port::stop_bits::one));
         serialPort.set_option(serial_port::flow_control(serial_port::flow_control::none));
 
-	std::vector<char> packed_dimensions(n);
-	boost::system::error_code e;
-	size_t len = 0;
-	
-	do  {
-		len += serialPort.read_some(boost::asio::buffer(&packed_dimensions[len], n-len), e);
-	} while ( (len < n) && (!e) );
+        std::vector<char> packed_dimensions(n);
+        boost::system::error_code e;
+        size_t len = 0;
 
-	if (len == n) {
-		std::cout << std::string(packed_dimensions.begin(), packed_dimensions.end()) << std::endl;
-	} else {
-	    //throw std::exception(e.message().c_str());
-	}
+        //SBC3 TEST:
+        packed_dimensions[0]='h';
+        packed_dimensions[1]='e';
+        packed_dimensions[2]='l';
+        packed_dimensions[3]='p';
+        packed_dimensions[4]='\r';
+        packed_dimensions[5]='\n';
+        packed_dimensions[6]='\0';
+        len = serialPort.write_some(boost::asio::buffer(&packed_dimensions[len], 6), e);
+        std::cout << "wrote" << len <<" bytes" << std::endl;
+
+        len =0;
+        do  {
+            len += serialPort.read_some(boost::asio::buffer(&packed_dimensions[len], n-len), e);
+        } while ( (len < n) && (!e) );
+
+        if (len == n) {
+            std::cout << std::string(packed_dimensions.begin(), packed_dimensions.end()) << std::endl;
+        } else {
+            //throw std::exception(e.message().c_str());
+        }
 
         serialPort.close();
     }
@@ -45,7 +57,7 @@ int main(int argc, char *argv[])
     }
     catch (std::exception& e)
     {
-	std::cerr << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
     }
 
 }

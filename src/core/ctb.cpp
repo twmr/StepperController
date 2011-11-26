@@ -24,14 +24,23 @@
 #include "rs232.hpp"
 #include "global.hpp"
 #include <boost/property_tree/ptree.hpp>
-
+#include <boost/algorithm/string.hpp>  //for replace_all
 
 sctl_ctb::sctl_ctb(const boost::property_tree::ptree& config) :
     devicename(config.get<std::string>("devname")),
     baudrate(config.get<int>("baudrate")),
     protocol(config.get<std::string>("protocol")),
+    eos(config.get<std::string>("eos")),
+    timeout(config.get<unsigned int>("timeout", 50000)), //useconds
     serialPort(STD_TR1::shared_ptr< ctb::SerialPort >(new ctb::SerialPort())),
-    device(STD_TR1::shared_ptr< ctb::IOBase >(static_cast<ctb::IOBase*>(0))) { };
+    device(STD_TR1::shared_ptr< ctb::IOBase >(static_cast<ctb::IOBase*>(0)))
+{
+    //unescape eos string
+    boost::replace_all(eos, "\\\\", "\\");
+    boost::replace_all(eos, "\\t",  "\t");
+    boost::replace_all(eos, "\\n",  "\n");
+    boost::replace_all(eos, "\\r",  "\r");
+};
 
 
 void sctl_ctb::open()
@@ -104,7 +113,7 @@ size_t sctl_ctb::receive(char *buf, const ssize_t n)
 size_t sctl_ctb::send( const char *buf, const ssize_t n)
 {
     size_t size = 0;
-
+    // std::cout << "in send:" << buf << std::endl;
 #ifndef SERIAL_DEBUG // if defined run without hardware
     size = device->Write( const_cast<char*>(buf), n);
 #else
