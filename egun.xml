@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config device="EGUN">
   <rs232>
-    <devname>/dev/ttyUSB0</devname>
+    <devname>/dev/ttyUSB1</devname>
     <eos>\r\n</eos>
     <protocol>8N1</protocol>
-    <baudrate>9600</baudrate>
+    <baudrate>19200</baudrate>
     <timeout>50000</timeout>
   </rs232>
 </config>

@@ -28,12 +28,15 @@
 
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/tokenizer.hpp>
+#include <boost/tuple/tuple.hpp>
 namespace po = boost::program_options;
+namespace tp = boost::tuples;
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -89,7 +92,7 @@ string send_lowlevel(STD_TR1::shared_ptr< RS232 >& sinf, string sendcmd)
     /* write() is assumed to work in one run, as the commands sent
        to the serial port have a really small size */
     send_retval = sinf->send(sendcmd.c_str(), sendcmd.length());
-    std::cout << " - send ret: " << send_retval;
+    // std::cout << " - send ret: " << send_retval;
 
     while(len <= 0 || readflag) {
         usleep(sinf->get_timeout());
@@ -108,14 +111,21 @@ string send_lowlevel(STD_TR1::shared_ptr< RS232 >& sinf, string sendcmd)
         }
     }
 
-#ifdef SERIAL_DEBUG // if defined run without hardware
-    if(cmd == "ERRORMSG_TEST")
-        sprintf(buffer,"01:! this is a sample error msg\r\n");
-#endif
+    // std::cout <<  " - received: len=" << strlen(buffer)
+    //           << " buf: " << buffer;
+    //           << std::endl;
 
-     std::cout <<  " - received: len=" << strlen(buffer)
-               << std::endl;
-               // << " buf: " << buffer;
+    //stip last 3 chars from the Egun return message
+    // last 3 chars are: Ascii 13, 10, 13
+    buffer[strlen(buffer)-3] ='\0';
+
+    // for(size_t i=0; i < strlen(buffer); ++i) {
+    //     cout << i << ":\t" << static_cast<int>(buffer[i]);
+    //     if(buffer[i] > 31 && buffer[i] != 127)
+    //         cout << " " << buffer[i] << endl;
+    //     else
+    //         cout << endl;
+    // }
 
     return std::string(buffer);
 }
@@ -134,6 +144,35 @@ int main(int argc, char* argv[])
     vector<string> batchcmds;
     bool send_single_cmd = false;
     string configfile("egun.xml");
+
+    const vector<string> controls = { "Energy", "Source", "Grid", "fristAnode",
+                                      "Focus", "n/a", "Xdeflection", "Ydeflection" };
+    const vector<unsigned int> convfacs = { 10, 1000, 100, 10,
+                                            10, 0, 100, 100 };
+    const vector<tp::tuple<double, double, double, double> > defaultparams =
+        { { 10.0, 0.12, 0.0, 13.9 },
+          { 20, -0.36, 0.0,9.8},
+          { 30, -0.74, 0.0,9.1},
+          { 40, -0.90, 0.0,9.2},
+          { 50, -1.0, 0.0,10},
+          {100, -3, 0, 15},
+          {200, -7, 0, 36},
+          {300, -11, 0, 52},
+          {400, -12, -1, 69},
+          {500, -13, -5, 98},
+          {600, -15, -1, 136.6},
+          {700, -14, -3, 192},
+          {800, -15, -2, 292},
+          {900, -15, -3, 309},
+          {1000, -15,-1, 339},
+          {1100, -22,-4, 357},
+          {1200, -26,-2, 390},
+          {1300, -27,-5, 400},
+          {1400, -22,-7, 441},
+          {1500, -24,-10, 468},
+          {1600, -27,-10, 499}
+    };
+
 
     // Read command line arguments
     try {
@@ -188,10 +227,6 @@ int main(int argc, char* argv[])
         signal(SIGINT, catch_int);
 
         serial_interface->open();
-        if(send_single_cmd) {
-            cout << "sending cmd \"" << cmd << "\" to server" << endl;
-            return 0;
-        }
         while(true) {
             if(batch_mode) {
                 cout << "#> ";
@@ -204,8 +239,8 @@ int main(int argc, char* argv[])
             {
                 // interactive mode
 
-                cmd = readline("$>");
-
+                if(!send_single_cmd)
+                    cmd = readline("\033[0;31m$> \033[0m");
 
                 if(!cmd.compare("quit") || !cmd.compare("q")) {
                     /* disconnect from tcp/ip server */
@@ -219,14 +254,102 @@ int main(int argc, char* argv[])
             if(!cmd.length()) // empty string
                 continue;
 
+            bool found=false;
+            bool load_defaults=false;
+            double eval=0.0; // Energy value
+            //maybe use find_if .....
+            // for(std::vector<string>::const_iterator it = controls.begin(); it != controls.end(); ++it){
+
+            // std::vector<string>::const_iterator fd = find(controls.begin(), controls.end(), cmd);
+            // if(fd != controls.end())
+
+
+            for(size_t idx = 0; idx < controls.size(); ++idx) {
+                if(!boost::starts_with(cmd, controls[idx]))
+                    continue;
+
+                found = true;
+                //check wheather we want to set or get the Value
+                size_t pos = cmd.find_first_of('=');
+                if(pos != string::npos) {
+                    boost::replace_all(cmd, "\n", "");
+                    // cout<< "|" << cmd << "|" << cmd.substr(pos+1) << "|" << endl;
+                    double setval = boost::lexical_cast<double>(cmd.substr(pos+1));
+                    cmd = "po:";
+                    cmd += boost::lexical_cast<string>(idx);
+                    cmd += ",";
+                    cmd += boost::lexical_cast<string>(static_cast<int>(setval*convfacs[idx]));
+
+                    if(idx==0 && (setval == floor(setval))) { // Energy command
+                        load_defaults = true;
+                        eval = setval;
+                    }
+                }
+                else {
+                    cmd = "go:";
+                    cmd += boost::lexical_cast<string>(idx);
+                }
+
+                cout << "Command to send: "<< cmd << endl;
+                string rpl = send_lowlevel(serial_interface, cmd);
+
+                if(load_defaults) {
+                    for(vector<tp::tuple<double,double,double,double> >::const_iterator it = defaultparams.begin();
+                        it != defaultparams.end(); ++it){
+                        if(it->get<0>() == eval)
+                        {
+                            cout << it->get<0>() << endl;
+                            cmd = "po:";
+                            cmd += boost::lexical_cast<string>(6);
+                            cmd += ",";
+                            cmd += boost::lexical_cast<string>(static_cast<int>(it->get<1>()*convfacs[6]));
+                            cout << "Command to send: "<< cmd << endl;
+                            send_lowlevel(serial_interface, cmd);
+                            cmd = "po:";
+                            cmd += boost::lexical_cast<string>(7);
+                            cmd += ",";
+                            cmd += boost::lexical_cast<string>(static_cast<int>(it->get<2>()*convfacs[7]));
+                            cout << "Command to send: "<< cmd << endl;
+                            send_lowlevel(serial_interface, cmd);
+                            cmd = "po:";
+                            cmd += boost::lexical_cast<string>(4);
+                            cmd += ",";
+                            cmd += boost::lexical_cast<string>(static_cast<int>(it->get<3>()*convfacs[4]));
+                            cout << "Command to send: "<< cmd << endl;
+                            send_lowlevel(serial_interface, cmd);
+                            break;
+                        }
+                    }
+                }
+
+                //this is now done in send_lowlevel
+                // rpl = rpl.substr(0,rpl.length() - 3);
+
+                pos = rpl.find_first_of(',');
+                if(pos != string::npos) {
+                    int curval = boost::lexical_cast<int>(rpl.substr(pos+1));
+                    cout << "value: " << 1.0*curval/convfacs[idx] << endl;
+                }
+                else
+                    cout << "Error:" << rpl << endl;
+                break;
+            }
+
+
             // if(reply.type == MSG_ERROR)
             //      cout << "\033[0;31mError: " << reply.msg << "\033[0m" << endl;
             // else if(reply.type == MSG_SUCCESS)
             //     cout << "\033[0;32m" << "OK" << "\033[0m" << endl;
             // else
             // cout << send_lowlevel(serial_interface, cmd) << endl;
-            string rpl = send_lowlevel(serial_interface, cmd);
-            cout << rpl << endl;
+            if(!found) {
+                string rpl = send_lowlevel(serial_interface, cmd);
+                cout << rpl << endl;
+            }
+
+            if(send_single_cmd)
+                break;
+
             // for(size_t i=0; i < rpl.length(); ++i) {
             //     cout << i << ":\t" << static_cast<int>(rpl[i]);
             //     if(rpl[i] > 31 && rpl[i] != 127)
