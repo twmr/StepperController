@@ -229,16 +229,15 @@ int main(int argc, char* argv[])
         serial_interface->open();
         while(true) {
             if(batch_mode) {
-                cout << "#> ";
                 if(!batchcmds.size())
                     break;
+                cout << "\033[0;31m$> \033[0m";
                 cmd = batchcmds.front();
                 batchcmds.erase(batchcmds.begin());
                 cout << cmd << endl;
             } else
             {
                 // interactive mode
-
                 if(!send_single_cmd)
                     cmd = readline("\033[0;31m$> \033[0m");
 
@@ -269,15 +268,13 @@ int main(int argc, char* argv[])
                     continue;
 
                 found = true;
-                //check wheather we want to set or get the Value
+                //check whether we want to set or get the value
                 size_t pos = cmd.find_first_of('=');
                 if(pos != string::npos) {
                     boost::replace_all(cmd, "\n", "");
                     // cout<< "|" << cmd << "|" << cmd.substr(pos+1) << "|" << endl;
                     double setval = boost::lexical_cast<double>(cmd.substr(pos+1));
-                    cmd = "po:";
-                    cmd += boost::lexical_cast<string>(idx);
-                    cmd += ",";
+                    cmd = "po:" + boost::lexical_cast<string>(idx) + ",";
                     cmd += boost::lexical_cast<string>(static_cast<int>(setval*convfacs[idx]));
 
                     if(idx==0 && (setval == floor(setval))) { // Energy command
@@ -286,8 +283,7 @@ int main(int argc, char* argv[])
                     }
                 }
                 else {
-                    cmd = "go:";
-                    cmd += boost::lexical_cast<string>(idx);
+                    cmd = "go:" + boost::lexical_cast<string>(idx);
                 }
 
                 cout << "Command to send: "<< cmd << endl;
@@ -298,32 +294,27 @@ int main(int argc, char* argv[])
                         it != defaultparams.end(); ++it){
                         if(it->get<0>() == eval)
                         {
-                            cout << it->get<0>() << endl;
-                            cmd = "po:";
-                            cmd += boost::lexical_cast<string>(6);
-                            cmd += ",";
-                            cmd += boost::lexical_cast<string>(static_cast<int>(it->get<1>()*convfacs[6]));
+                            cout << "Load default values for " << it->get<0>()
+                                 << "eV" << endl;
+                            //x-deflection
+                            cmd = "po:6," + boost::lexical_cast<string>(
+                                static_cast<int>(it->get<1>()*convfacs[6]));
                             cout << "Command to send: "<< cmd << endl;
                             send_lowlevel(serial_interface, cmd);
-                            cmd = "po:";
-                            cmd += boost::lexical_cast<string>(7);
-                            cmd += ",";
-                            cmd += boost::lexical_cast<string>(static_cast<int>(it->get<2>()*convfacs[7]));
+                            //y-deflection
+                            cmd = "po:7," + boost::lexical_cast<string>(
+                                static_cast<int>(it->get<2>()*convfacs[7]));
                             cout << "Command to send: "<< cmd << endl;
                             send_lowlevel(serial_interface, cmd);
-                            cmd = "po:";
-                            cmd += boost::lexical_cast<string>(4);
-                            cmd += ",";
-                            cmd += boost::lexical_cast<string>(static_cast<int>(it->get<3>()*convfacs[4]));
+                            //Vfocus
+                            cmd = "po:4," + boost::lexical_cast<string>(
+                                static_cast<int>(it->get<3>()*convfacs[4]));
                             cout << "Command to send: "<< cmd << endl;
                             send_lowlevel(serial_interface, cmd);
                             break;
                         }
                     }
                 }
-
-                //this is now done in send_lowlevel
-                // rpl = rpl.substr(0,rpl.length() - 3);
 
                 pos = rpl.find_first_of(',');
                 if(pos != string::npos) {
