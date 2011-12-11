@@ -114,7 +114,7 @@ string send_lowlevel(STD_TR1::shared_ptr< RS232 >& sinf, string sendcmd)
     // std::cout <<  " - received: len=" << strlen(buffer)
     //           << " buf: " << buffer;
     //           << std::endl;
-
+           
     //stip last 3 chars from the Egun return message
     // last 3 chars are: Ascii 13, 10, 13
     buffer[strlen(buffer)-3] ='\0';

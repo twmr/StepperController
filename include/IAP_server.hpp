@@ -22,7 +22,7 @@
 #ifndef __IAPServer__
 #define __IAPServer__
 
-#include "global.hpp"
+#include "message.hpp"
 #include <iostream>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
@@ -38,49 +38,59 @@ namespace IAPServer {
         tcp::socket& socket() { return socket_; }
 
         void start() {
-            socket_.async_read_some(boost::asio::buffer(reinterpret_cast<char*>(&data_), msglen),
-                                    boost::bind(&session::handle_read, this,
-                                                boost::asio::placeholders::error,
-                                                boost::asio::placeholders::bytes_transferred));
+            socket_.async_read_some(boost::asio::buffer(data_.data(), msg_t::header_length),
+                                    boost::bind(&session::handle_read_header, this,
+                                                boost::asio::placeholders::error));
         }
 
         void process_msg(msg_t& msg);
-
-        // void blocking_send(const std::string& str) {
-        //     strcpy(blocking_msg.msg, str.c_str());
-        //     blocking_msg.type = MSG_REPLY;
-        //     boost::asio::write(socket_, boost::asio::buffer(reinterpret_cast<char*>(&blocking_msg), msglen));
-        // }
 
         /* process_msg triggers functions which call async_send
          * async_send just copies data into the private data_ message object
          */
         void prepare_tcp_message(const std::string& str) {
-            strcpy(data_.msg, str.c_str());
-            data_.type = MSG_REPLY;
+            strcpy(data_.body(), str.c_str());
+            data_.set_type(MSG_REPLY);
         }
 
         void prepare_tcp_err_message(const std::string& str) {
-            strcpy(data_.msg, str.c_str());
-            data_.type = MSG_ERROR;
+            strcpy(data_.body(), str.c_str());
+            data_.set_type(MSG_ERROR);
         }
 
         void prepare_tcp_success_message() {
-            data_.msg[0]='\0';
-            data_.type = MSG_SUCCESS;
+            data_.body()[0]='\0';
+            data_.set_type(MSG_SUCCESS);
         }
 
-        void handle_read(const boost::system::error_code& error,
-                         size_t bytes_transferred) {
+        void handle_read_header(const boost::system::error_code& error) {
+            if (!error && data_.decode_header())
+            {
+                std::cout << " header_received [" << data_.get_type()
+                          << "] with length : " << data_.get_body_length() << std::endl;
+
+                boost::asio::async_read(socket_,
+                                             boost::asio::buffer(data_.body(), data_.get_body_length()),
+                                             boost::bind(&session::handle_read_body, this,
+                                                         boost::asio::placeholders::error));
+            }
+            else
+                delete this;
+        }
+
+        void handle_read_body(const boost::system::error_code& error) {
             if (!error)
             {
-                std::cout << " new message: [" << static_cast<int>(data_.type)
-                          << "] content : " << data_.msg << std::endl;
-
+                //this function does all the work and updates the body and the type of the return message
                 process_msg(data_);
 
+                //update len field of header
+                //assumes that process_msg 0-terminates the body
+                data_.set_body_length(strlen(data_.body()));
+                data_.encode_header();
+
                 boost::asio::async_write(socket_,
-                                         boost::asio::buffer(reinterpret_cast<char*>(&data_), bytes_transferred),
+                                         boost::asio::buffer(data_.data(), data_.get_length()),
                                          boost::bind(&session::handle_write, this,
                                                      boost::asio::placeholders::error));
             }
@@ -91,24 +101,17 @@ namespace IAPServer {
         void handle_write(const boost::system::error_code& error) {
             if (!error)
             {
-                socket_.async_read_some(boost::asio::buffer(reinterpret_cast<char*>(&data_), msglen),
-                                        boost::bind(&session::handle_read, this,
-                                                    boost::asio::placeholders::error,
-                                                    boost::asio::placeholders::bytes_transferred));
+                socket_.async_read_some(boost::asio::buffer(data_.data(),msg_t::header_length),
+                                        boost::bind(&session::handle_read_header, this,
+                                                    boost::asio::placeholders::error));
             }
             else
                 delete this;
         }
 
-        // msg_t& get_message() {
-        //     return data_;
-        // }
-
-
     private:
         tcp::socket socket_;
         msg_t data_;
-        // msg_t blocking_msg;
     };
 }
 

@@ -1,4 +1,5 @@
 #add_definitions(-DDEBUG_STANDALONE)
+add_definitions(-DWANT_BOOST_ASIO_GUI)
 
 set(CMAKE_CXX_FLAGS "-Wall -std=c++0x -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-Wextra")
@@ -17,5 +18,6 @@ TARGET_LINK_LIBRARIES(
 	moves_gui
 		${wxWidgets_LINK_FLAGS}
 		${wxWidgets_LIBRARIES}
+    boost_system
+    pthread
 )
-# ${wxWidgets_LIBRARIES} pangocairo-1.0 X11 cairo)

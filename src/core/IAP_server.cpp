@@ -49,9 +49,6 @@ namespace IAPServer
         "HELP:\n"
         "available commands are:\n"
         "quit          : quit the client\n" //implemented in the client
-        // "close         : stop the current session\n"
-        // "serialtest    : test rs232 communication\n"
-        // "\n"
         "sleep N       : sleep N seconds\n" //implemented in the client
         "set axis N    : setaxis where N is the axis ID\n"
         "set/unset jog : enable or disable jog mode\n"
@@ -108,9 +105,9 @@ namespace IAPServer
 
     void session::process_msg(msg_t& message)
     {
-        //cout << "Got Command: " << message.msg << endl;
-        string data(message.msg);
-        message.type = MSG_REPLY;
+        string data(message.body(),message.get_body_length());
+        cout << "Got Command: " << data << endl;
+        message.set_type(MSG_REPLY);
         int ret = 0;
 
         if(! data.compare("help")) {
@@ -118,10 +115,10 @@ namespace IAPServer
         }
 #ifdef SERIAL_DEBUG
         else if(! data.compare("ERRORMSG_TEST")) {
-            int ret = board->send_command("ERRORMSG_TEST", message.msg);
+            int ret = board->send_command("ERRORMSG_TEST", message.body());
             if(ret < 0)
                 prepare_tcp_err_message(
-                    board->get_err_string(static_cast<pm381_err_t>(-ret), message.msg));
+                    board->get_err_string(static_cast<pm381_err_t>(-ret), message.body()));
             else
                 prepare_tcp_success_message();
         }
@@ -161,7 +158,7 @@ namespace IAPServer
             BarePosition bp = board->createBarePosition();
             board->get_cur_position(bp);
             map<size_t,string>& id_string_map = board->get_coord_map();
-            bp.GetPositionString(message.msg,id_string_map);
+            bp.GetPositionString(message.body(),id_string_map);
         }
         else if(! data.compare("pp")) {
             //print positions
@@ -169,7 +166,7 @@ namespace IAPServer
             board->get_cur_position(p);
             map<size_t,string>& id_string_map = board->get_coord_map();
             map<size_t,string>& id_unit_map = board->get_unit_map();
-            p.GetPositionString(message.msg, id_string_map, id_unit_map);
+            p.GetPositionString(message.body(), id_string_map, id_unit_map);
         }
         else if (! data.compare("ga")) {
             //prints all registered axes + units + ids (used inside the GUI)
@@ -219,16 +216,16 @@ namespace IAPServer
             ostringstream os;
 
             os << "upper softlimits:" << endl;
-            usl.GetPositionString(message.msg, id_string_map, id_unit_map);
-            os << message.msg;
+            usl.GetPositionString(message.body(), id_string_map, id_unit_map);
+            os << message.body();
             // for(Position::coord_type::const_iterator
             //   it = usl.begin(); it != usl.end(); ++it) {
             //   os << "\t\'" << id_string_map[it->first] << "\'=" << usl.GetCoordinate(it->first) << endl;
             // }
 
             os << "\nlower softlimits:" << endl;
-            lsl.GetPositionString(message.msg, id_string_map, id_unit_map);
-            os << message.msg;
+            lsl.GetPositionString(message.body(), id_string_map, id_unit_map);
+            os << message.body();
             // for(Position::coord_type::const_iterator
             //   it = lsl.begin(); it != lsl.end(); ++it) {
             //   os << "\t\'" << id_string_map[it->first] << "\'=" << lsl.GetCoordinate(it->first) << endl;
@@ -272,10 +269,10 @@ namespace IAPServer
 
                 if(! setvar.compare("jog")) {
                     //enable jog mode
-                    ret = board->send_command("1AR", message.msg);
+                    ret = board->send_command("1AR", message.body());
                     if(ret < 0)
                         prepare_tcp_err_message(
-                            board->get_err_string(static_cast<pm381_err_t>(-ret), message.msg));
+                            board->get_err_string(static_cast<pm381_err_t>(-ret), message.body()));
                     else
                         prepare_tcp_success_message();
                 }
@@ -298,10 +295,10 @@ namespace IAPServer
 
                 if(! unsetvar.compare("jog")) {
                     //disable jog mode
-                    ret = board->send_command("1IR", message.msg);
+                    ret = board->send_command("1IR", message.body());
                     if(ret < 0)
                         prepare_tcp_err_message(
-                            board->get_err_string(static_cast<pm381_err_t>(-ret), message.msg));
+                            board->get_err_string(static_cast<pm381_err_t>(-ret), message.body()));
                     else
                         prepare_tcp_success_message();
                 }
@@ -367,10 +364,10 @@ namespace IAPServer
             boost::regex e2("^[[:digit:]][[:alpha:]]+-?[[:digit:]]*$");
 
             if(boost::regex_match(data, what, e2, boost::match_extra)) {
-                ret = board->send_command(data,message.msg);
+                ret = board->send_command(data,message.body());
                 if(ret < 0)
                     prepare_tcp_err_message(board->get_latest_error());
-                        // board->get_err_string(static_cast<pm381_err_t>(-ret), message.msg));
+                        // board->get_err_string(static_cast<pm381_err_t>(-ret), message.body()));
                 return;
             }
             else

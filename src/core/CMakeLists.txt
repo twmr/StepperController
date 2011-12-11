@@ -1,4 +1,4 @@
-#add_definitions(-DSERIAL_DEBUG)
+add_definitions(-DSERIAL_DEBUG)
 
 set(CMAKE_CXX_FLAGS "-Wall -std=c++0x -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-Wextra")
@@ -19,7 +19,7 @@ add_executable(
 		IAP_client_cli.cpp
 )
 target_link_libraries(moves_client_cli ${CTB_LIBRARY} boost_system
-	boost_program_options pthread readline)
+	boost_program_options boost_thread-mt pthread readline)
 
 add_executable(
   moves_egun_cli
