@@ -26,7 +26,8 @@
 #include <iostream>
 #include <vector>
 
-#include <boost/asio.hpp>
+// #include <boost/asio.hpp>
+#include <boost/asio/signal_set.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -40,8 +41,6 @@ namespace tp = boost::tuples;
 
 #include <readline/readline.h>
 #include <readline/history.h>
-
-#include <signal.h> //FIXME not available for non unix systems
 
 #include "global.hpp"
 #include "rs232.hpp"
@@ -130,10 +129,14 @@ string send_lowlevel(STD_TR1::shared_ptr< RS232 >& sinf, string sendcmd)
     return std::string(buffer);
 }
 
-void catch_int(int sig)
+
+
+void handler(const boost::system::error_code& error, int sinum)
 {
-    write_history(".egun.hist");
-    exit(0);
+    if(!error){
+        write_history(".egun.hist");
+        exit(0);
+    }
 }
 
 int main(int argc, char* argv[])
@@ -224,7 +227,10 @@ int main(int argc, char* argv[])
         egunconfig config(configfile);
         STD_TR1::shared_ptr< RS232 > serial_interface(new sctl_ctb(config.GetParameters("rs232")));
         read_history(".egun.hist");
-        signal(SIGINT, catch_int);
+
+        // Construct a signal set registered for process termination.
+        boost::asio::signal_set signals(io_service, SIGINT,SIGTERM);
+        signals.async_wait(handler)
 
         serial_interface->open();
         while(true) {
