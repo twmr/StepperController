@@ -26,7 +26,11 @@
 #include <vector>
 #include "wx/vector.h"
 #include "wx/tokenzr.h"
+#ifdef WANT_BOOST_ASIO_GUI
+#include <boost/asio.hpp>
+#else
 #include "wx/socket.h"
+#endif
 #include "pm301.h"
 
 ////@begin XPM images
@@ -64,16 +68,30 @@ BEGIN_EVENT_TABLE( PM301, wxFrame )
 
 END_EVENT_TABLE()
 
+
+using boost::asio::ip::tcp;
+
 /*
  * PM301 constructors
  */
 
-PM301::PM301()
+PM301::PM301():
+    #ifdef WANT_BOOST_ASIO_GUI
+        io_service(),
+        res(io_service),
+        s(io_service),
+    #endif
+    m_mutex()
 {
     Init();
 }
 
 PM301::PM301( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style ) :
+    #ifdef WANT_BOOST_ASIO_GUI
+        io_service(),
+        res(io_service),
+        s(io_service),
+    #endif
     m_mutex()
 {
     Init();
@@ -124,25 +142,28 @@ void PM301::Init()
     batchmodelog = NULL;
     batchmodetextctl = NULL;
 ////@end PM301 member initialisation
+
     posthread=NULL;
     initialize = false;
     accept_and_quit = NULL;
 
 #ifndef DEBUG_STANDALONE
     std::cout << "connecting to localhost" << std::endl;
+#ifdef WANT_BOOST_ASIO_GUI
+    tcp::resolver::query query(tcp::v4(), "localhost", "16000");
+    tcp::resolver::iterator iterator = res.resolve(query);
+
+    // boost::asio::connect(s, iterator);
+    s.connect(*iterator);
+#else
     wxIPV4address addr;
     addr.Hostname(wxT("localhost"));
     addr.Service(16000);
-
     s = new wxSocketClient();
     //s->SetFlags(wxSOCKET_WAITALL);
-
-
     //s->SetEventHandler(*this, SOCKET_ID);
     //s->SetNotify(wxSOCKET_INPUT_FLAG|wxSOCKET_LOST_FLAG);
-
     //s->Notify(true);
-
     // FIXME SetFlags WaitALL ?????????
 
     //Block the GUI
@@ -152,6 +173,7 @@ void PM301::Init()
         std::cerr << "connection failure" << std::endl;
         exit(1);
     }
+#endif
 
 #endif
 }
@@ -372,10 +394,16 @@ const wxString PM301::SendandReceive(const wxString& msgstr)
     strcpy(msg.msg, msgstr.mb_str());
 
 #ifndef DEBUG_STANDALONE
+#ifdef WANT_BOOST_ASIO_GUI
+    boost::asio::write(s, boost::asio::buffer(&msg, msglen));
+    size_t reply_length = boost::asio::read(s,
+        boost::asio::buffer(&msg, msglen));
+#else
     s->Write(reinterpret_cast<void*>(&msg), msglen);
     //std::cout << "msg sent" << std::endl;
     s->Read(reinterpret_cast<void*>(&msg), msglen);
     //std::cout << "msg recv" << std::endl;
+#endif
 #endif
 
     if(msg.type == MSG_SUCCESS)

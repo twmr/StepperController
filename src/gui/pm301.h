@@ -25,9 +25,14 @@
 
 #include "wx/vector.h"
 #include "wx/spinctrl.h"
-#include "wx/socket.h"
 #include "wx/thread.h"
 #include "wx/textfile.h"
+
+#ifdef WANT_BOOST_ASIO_GUI
+#include <boost/asio.hpp>
+#else
+#include "wx/socket.h"
+#endif
 
 #include "global.hpp"
 #include "position.hpp"
@@ -118,7 +123,10 @@ public:
 ////@end PM301 event handler declarations
 
     void OnPosCTRLUpdated( wxCommandEvent& event );
+#ifndef WANT_BOOST_ASIO_GUI
     void OnSocketEvent( wxSocketEvent& event );
+#endif
+
     // void OnBitmapbuttonClick( wxCommandEvent& event );
     void OnRadioboxSelected( wxCommandEvent& event );
     void OnButtonAcceptandquit( wxCommandEvent& event );
@@ -189,7 +197,14 @@ public:
     wxVector<wxString*> units;
 
 private:
+#ifdef WANT_BOOST_ASIO_GUI
+    boost::asio::io_service io_service;
+    boost::asio::ip::tcp::resolver res;
+    boost::asio::ip::tcp::socket s;
+#else
     wxSocketClient* s;
+#endif
+    
     msg_t request, reply;
     PositionUpdateThread *posthread;
     bool initialize;
