@@ -109,7 +109,7 @@ string send_lowlevel(STD_TR1::shared_ptr< RS232 >& sinf, string sendcmd)
     }
 
 #ifdef SERIAL_DEBUG // if defined run without hardware
-    if(cmd == "ERRORMSG_TEST")
+    if(sendcmd == "ERRORMSG_TEST")
         sprintf(buffer,"01:! this is a sample error msg\r\n");
 #endif
 

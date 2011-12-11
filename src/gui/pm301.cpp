@@ -389,27 +389,41 @@ wxIcon PM301::GetIconResource( const wxString& name )
 const wxString PM301::SendandReceive(const wxString& msgstr)
 {
     wxMutexLocker lock(m_tcpmutex);
-    msg_t msg;
-    msg.type = MSG_REQUEST;
-    strcpy(msg.msg, msgstr.mb_str());
+
+    request.set_type(MSG_REQUEST);
+    strcpy(request.body(), msgstr.mb_str());
+    request.set_body_length(msgstr.length());
+    request.encode_header();
 
 #ifndef DEBUG_STANDALONE
 #ifdef WANT_BOOST_ASIO_GUI
-    boost::asio::write(s, boost::asio::buffer(&msg, msglen));
+    boost::asio::write(s, boost::asio::buffer(request.data(), request.get_length()));
     size_t reply_length = boost::asio::read(s,
-        boost::asio::buffer(&msg, msglen));
+                                            boost::asio::buffer(reply.data(), msg_t::header_length));
+    if(reply_length == 0 || !reply.decode_header())
+        return "FAILURE";
+
+    reply_length = boost::asio::read(s,
+                                     boost::asio::buffer(reply.body(), reply.get_body_length()));
 #else
-    s->Write(reinterpret_cast<void*>(&msg), msglen);
+    s->Write(reinterpret_cast<void*>(request.data()), request.get_length());
+
     //std::cout << "msg sent" << std::endl;
-    s->Read(reinterpret_cast<void*>(&msg), msglen);
+    s->Read(reinterpret_cast<void*>(reply.data()), msg_t::header_length);
+    if(reply.decode_header())
+        s->Read(reinterpret_cast<void*>(reply.body()), reply.get_body_length());
+    else {
+        std::cerr << "NETWORK PACKET DECODING ERROR" << std::endl;
+        return "ERROR";
+    }
     //std::cout << "msg recv" << std::endl;
 #endif
 #endif
 
-    if(msg.type == MSG_SUCCESS)
+    if(reply.get_type() == MSG_SUCCESS)
         return wxString("OK");
     else
-        return wxString(msg.msg);
+        return wxString(reply.body(), reply.get_body_length());
 }
 
 

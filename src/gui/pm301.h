@@ -34,7 +34,7 @@
 #include "wx/socket.h"
 #endif
 
-#include "global.hpp"
+#include "message.hpp"
 #include "position.hpp"
 #include "PosCtrl.h"
 

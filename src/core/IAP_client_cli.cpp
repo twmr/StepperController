@@ -31,6 +31,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 #include <boost/tokenizer.hpp>
+//#include <boost/thread.hpp>
 namespace po = boost::program_options;
 
 #include <readline/readline.h>
@@ -45,6 +46,159 @@ namespace po = boost::program_options;
 using boost::asio::ip::tcp;
 using namespace std;
 
+class cli_client
+{
+public:
+  cli_client(boost::asio::io_service& io_service,
+      tcp::resolver::iterator endpoint_iterator)
+    : io_service_(io_service),
+      socket_(io_service)
+  {
+
+      tcp::endpoint endpoint = *endpoint_iterator;
+
+      //blocking connect
+      socket_.connect(endpoint);
+
+//      //async connect
+//      socket_.async_connect(endpoint,
+//                            boost::bind(&cli_client::handle_connect, this,
+//                                        boost::asio::placeholders::error, ++endpoint_iterator));
+  }
+
+  ~cli_client()
+  {
+      do_close();
+  }
+
+//  //async version
+//  void awrite(const std::string& cmd)
+//  {
+//      io_service_.post(boost::bind(&cli_client::do_write, this, cmd, true));
+//  }
+
+  //blocking wite
+  void write(const std::string& cmd)
+  {
+      cli_client::do_write(cmd,false);
+  }
+
+  //blocking read
+  std::string read(void)
+  {
+      size_t reply_length = boost::asio::read(socket_,
+                                              boost::asio::buffer(msg_.data(), msg_t::header_length));
+      if(reply_length == 0 || !msg_.decode_header())
+          return "FAILURE";
+
+      reply_length = boost::asio::read(socket_,
+                                       boost::asio::buffer(msg_.body(), msg_.get_body_length()));
+      return std::string(msg_.body(), msg_.get_body_length());
+  }
+
+  msg_type_t get_type(void) const
+  {
+      return msg_.get_type();
+  }
+
+  void close()
+  {
+    io_service_.post(boost::bind(&cli_client::do_close, this));
+  }
+
+private:
+
+  void handle_connect(const boost::system::error_code& error,
+      tcp::resolver::iterator endpoint_iterator)
+  {
+      if (!error)
+      {
+          boost::asio::async_read(socket_,
+                                  boost::asio::buffer(msg_.data(), msg_t::header_length),
+                                  boost::bind(&cli_client::handle_read_header, this,
+                                              boost::asio::placeholders::error));
+      }
+      else if (endpoint_iterator != tcp::resolver::iterator())
+      {
+          socket_.close();
+          tcp::endpoint endpoint = *endpoint_iterator;
+          socket_.async_connect(endpoint,
+                                boost::bind(&cli_client::handle_connect, this,
+                                            boost::asio::placeholders::error, ++endpoint_iterator));
+      }
+  }
+
+  void handle_read_header(const boost::system::error_code& error)
+  {
+      if (!error && msg_.decode_header())
+      {
+          boost::asio::async_read(socket_,
+                                  boost::asio::buffer(msg_.body(), msg_.get_body_length()),
+                                  boost::bind(&cli_client::handle_read_body, this,
+                                              boost::asio::placeholders::error));
+      }
+      else
+      {
+          do_close();
+      }
+  }
+
+  void handle_read_body(const boost::system::error_code& error)
+  {
+      if (!error)
+      {
+          std::cout.write(msg_.body(), msg_.get_body_length());
+          std::cout << "\n";
+      }
+      else
+      {
+          do_close();
+      }
+  }
+
+  void do_write(const std::string& cmd, bool async)
+  {
+      using namespace std;
+      msg_.set_type(MSG_REQUEST);
+      strcpy(msg_.body(),cmd.c_str());
+      msg_.set_body_length(cmd.size());
+      msg_.encode_header();
+      cout << " trying to send message (async): " << cmd
+           << "; len: " << msg_.get_body_length()
+           << "; " << msg_.body()[0] << msg_.body()[1]
+           << endl;
+
+      if(async) {
+//          boost::asio::async_write(socket_,
+//                                   boost::asio::buffer(msg_.data(),msg_.get_length()),
+//                                   boost::bind(&cli_client::handle_write, this,
+//                                               boost::asio::placeholders::error));
+      }
+      else
+          boost::asio::write(socket_, boost::asio::buffer(msg_.data(), msg_.get_length()));
+  }
+
+//  void handle_write(const boost::system::error_code& error)
+//  {
+//    if (error)
+//    {
+//      do_close();
+//    }
+//  }
+
+  void do_close()
+  {
+    socket_.close();
+  }
+
+private:
+  boost::asio::io_service& io_service_;
+  tcp::socket socket_;
+  msg_t msg_;
+};
+
+
+
 void catch_int(int sig)
 {
     write_history(".stepper.hist");
@@ -53,7 +207,6 @@ void catch_int(int sig)
 
 int main(int argc, char* argv[])
 {
-
     string serverhostname("localhost");
     string serverport("16000"); //string is ok here
     string batch;
@@ -113,8 +266,6 @@ int main(int argc, char* argv[])
 
     try
     {
-        msg_t request, reply;
-
         boost::asio::io_service io_service;
 
         tcp::resolver resolver(io_service);
@@ -122,29 +273,26 @@ int main(int argc, char* argv[])
         tcp::resolver::iterator iterator = resolver.resolve(query);
 
         tcp::socket s(io_service);
-        s.connect(*iterator);
+
+        cli_client c(io_service, iterator);
+
+        //boost::thread t(boost::bind(&boost::asio::io_service::run, &io_service));
+
+        char line[msg_t::max_body_length + 1];
 
         read_history(".stepper.hist");
         signal(SIGINT, catch_int);
 
-        strcpy(request.msg, "state");
-        request.type = MSG_REQUEST;
-        boost::asio::write(s, boost::asio::buffer(reinterpret_cast<char*>(&request), msglen));
-        boost::asio::read(s, boost::asio::buffer(reinterpret_cast<char*>(&reply), msglen));
-        std::string rpl = reply.msg;
-        // cout << "state is " << reply.msg << endl;
-        if(boost::starts_with(rpl,"initialize")) {
+        c.write("state");
+        if(boost::starts_with(c.read(),"initialize")) {
             cerr << "client console is disabled during initialization process" << endl;
             return -1;
         }
 
         if(send_single_cmd) {
             cout << "sending cmd \"" << cmd << "\" to server" << endl;
-            strcpy(request.msg, cmd.c_str());
-            request.type = MSG_REQUEST;
-            boost::asio::write(s, boost::asio::buffer(reinterpret_cast<char*>(&request), msglen));
-            boost::asio::read(s, boost::asio::buffer(reinterpret_cast<char*>(&reply), msglen));
-            cout << reply.msg << endl;
+            c.write(cmd);
+            cout << c.read() << endl;
             return 0;
         }
 
@@ -160,16 +308,16 @@ int main(int argc, char* argv[])
             {
                 // interactive mode
 
-                strncpy(request.msg, readline("$>"), MSGSIZE);
-                cmd=request.msg;
+                strncpy(line, readline("$>"), msg_t::max_body_length);
 
+                cmd=line;
                 if(!cmd.compare("quit") || !cmd.compare("q")) {
                     /* disconnect from tcp/ip server */
                     break;
                 }
 
-                if(request.msg && *request.msg)
-                    add_history(request.msg);
+                if(*line)
+                    add_history(line);
             }
 
             if(!cmd.length()) // empty string
@@ -187,22 +335,20 @@ int main(int argc, char* argv[])
                 cerr << "bad sleep parameter" << endl;
             }
 
-            if(batch_mode)
-                strcpy(request.msg, cmd.c_str());
+            c.write(cmd);
+            std::string reply = c.read();
+            if(c.get_type() == MSG_ERROR)
+                cout << "\033[0;31mError: " << reply << "\033[0m" << endl;
+            else if(c.get_type() == MSG_SUCCESS)
 
-
-            request.type = MSG_REQUEST;
-            boost::asio::write(s, boost::asio::buffer(reinterpret_cast<char*>(&request), msglen));
-            boost::asio::read(s, boost::asio::buffer(reinterpret_cast<char*>(&reply), msglen));
-
-            if(reply.type == MSG_ERROR)
-                 cout << "\033[0;31mError: " << reply.msg << "\033[0m" << endl;
-            else if(reply.type == MSG_SUCCESS)
                 cout << "\033[0;32m" << "OK" << "\033[0m" << endl;
             else
-                cout << reply.msg << endl;
+                cout << reply << endl;
 
         }
+
+        c.close();
+        //t.join();
 
     } catch (exception& e) {
         cerr << "Exception: " << e.what() << endl;
