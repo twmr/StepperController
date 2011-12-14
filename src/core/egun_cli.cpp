@@ -26,8 +26,8 @@
 #include <iostream>
 #include <vector>
 
-// #include <boost/asio.hpp>
-#include <boost/asio/signal_set.hpp>
+#include <boost/asio.hpp>
+// #include <boost/signal.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -129,23 +129,31 @@ string send_lowlevel(STD_TR1::shared_ptr< RS232 >& sinf, string sendcmd)
     return std::string(buffer);
 }
 
-
-
-void handler(const boost::system::error_code& error, int sinum)
+double linearfit(double x1, double x2, double y1, double y2, double xdesired)
 {
-    if(!error){
-        write_history(".egun.hist");
-        exit(0);
-    }
+    double slope = (y2-y1)/(x2-x1);
+    double dy = slope*(xdesired-x1);
+    return y1+dy;
 }
+
+
+
+
+// void handler(const boost::system::error_code& error, int sinum)
+// {
+//     if(!error){
+//         write_history(".egun.hist");
+//         exit(0);
+//     }
+// }
 
 int main(int argc, char* argv[])
 {
-    string batch;
-    string cmd;
+    string batch, cmd;
+    vector<string> cmds;
     bool batch_mode = false;
     vector<string> batchcmds;
-    bool send_single_cmd = false;
+    bool send_cmds = false;
     string configfile("egun.xml");
 
     const vector<string> controls = { "Energy", "Source", "Grid", "fristAnode",
@@ -176,6 +184,29 @@ int main(int argc, char* argv[])
           {1600, -27,-10, 499}
     };
 
+    const vector<tp::tuple<double, double, double, double> > defaultshifts =
+        { {0.4, 0.12, 0.0, 13.9 },
+          {0.4 , -0.36, 0.0,9.8},
+          {0.4, -0.74, 0.0,9.1},
+          {0.4, -0.90, 0.0,9.2},
+          {0.5, -1.0, 0.0,10},
+          {0.7, -3, 0, 15},
+          {1.0, -7, 0, 36},
+          {1.3, -11, 0, 52},
+          {1.7, -12, -1, 69},
+          {2.0, -13, -5, 98},
+          {2.4, -15, -1, 136.6},
+          {2.7, -14, -3, 192},
+          {3.0, -15, -2, 292},
+          {3.4, -15, -3, 309},
+          {3.7, -15,-1, 339},
+          {4.1, -22,-4, 357},
+          {4.4, -26,-2, 390},
+          {4.8, -27,-5, 400},
+          {5.1, -22,-7, 441},
+          {5.4, -24,-10, 468},
+          {5.7, -27,-10, 499}
+    };
 
     // Read command line arguments
     try {
@@ -184,8 +215,8 @@ int main(int argc, char* argv[])
             ("help,h", "produce help message")
             ("batchfile,b", po::value<string>(),
              "name of the batchfile to execute on the steppermotor hardware")
-            ("cmd,c", po::value<string>(),
-             "only send a single command to the sever, cmd needs to be put in parenthesis");
+            ("cmd,c", po::value<vector<string> >(),
+             "only send a single or multiple commands to the sever, cmd needs to be put in parenthesis");
 
         po::variables_map vm;
         po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -213,9 +244,14 @@ int main(int argc, char* argv[])
             batch_mode = true;
         }
         if (vm.count("cmd")) {
-            send_single_cmd = true;
-            cmd = vm["cmd"].as<string>();
+            send_cmds = true;
+            cmds = vm["cmd"].as<vector<string> >();
         }
+        // if (vm.count("path")) {
+        //     for(size_t i=0; i< cmds.size(); ++i)
+        //         cout << i << " " << cmds[i] << endl;
+        //     return 0;
+        // }
     }
     catch(exception& e) {
         cerr << "error: " << e.what() << "\n";
@@ -229,9 +265,10 @@ int main(int argc, char* argv[])
         read_history(".egun.hist");
 
         // Construct a signal set registered for process termination.
-        boost::asio::signal_set signals(io_service, SIGINT,SIGTERM);
-        signals.async_wait(handler)
+        // boost::asio::signal_set signals(io_service, SIGINT,SIGTERM);
+        // signals.async_wait(handler)
 
+        size_t curcmdidx=0;
         serial_interface->open();
         while(true) {
             if(batch_mode) {
@@ -244,8 +281,10 @@ int main(int argc, char* argv[])
             } else
             {
                 // interactive mode
-                if(!send_single_cmd)
+                if(!send_cmds)
                     cmd = readline("\033[0;31m$> \033[0m");
+                else //batchmode
+                    cmd = cmds[curcmdidx];
 
                 if(!cmd.compare("quit") || !cmd.compare("q")) {
                     /* disconnect from tcp/ip server */
@@ -281,12 +320,39 @@ int main(int argc, char* argv[])
                     // cout<< "|" << cmd << "|" << cmd.substr(pos+1) << "|" << endl;
                     double setval = boost::lexical_cast<double>(cmd.substr(pos+1));
                     cmd = "po:" + boost::lexical_cast<string>(idx) + ",";
-                    cmd += boost::lexical_cast<string>(static_cast<int>(setval*convfacs[idx]));
 
-                    if(idx==0 && (setval == floor(setval))) { // Energy command
-                        load_defaults = true;
-                        eval = setval;
+                    if(idx==0) { // Energy command
+                        load_defaults = true; // means load the values of xdefl, ydefl, and Focus from our table
+
+                        //make a linear fit (plus shift the Egun error)
+                        bool found=false;
+                        for(size_t i=0; i < defaultparams.size(); ++i){
+                            if(setval >= defaultparams[i].get<0>())
+                                continue;
+                            if(i==0) {
+                                cerr << "Energy is smaller than minimum energy in defaultparams, don't know what to do" << endl;
+                                return -1;
+                            }
+                            found=true;
+                            double E1 = defaultparams[i-1].get<0>();
+                            double E2 = defaultparams[i].get<0>();
+                            double dE1 = defaultshifts[i-1].get<0>();
+                            double dE2 = defaultshifts[i].get<0>();
+
+                            double fit = linearfit(E1,E2,dE1,dE2, setval);
+                            eval=setval-fit; //Energy value to send to the Egun Hardware
+                            setval = eval;
+                            cout << "setting Energy to: " << setval
+                                 << "; but send to Egun (due to systematic error of egun): " << eval << ")" << endl;
+                            break;
+                        }
+                        if(!found) {
+                            cerr << "Energy is larger than maximum energy in defaultparams, don't know what to do" << endl;
+                            return -1;
+                        }
                     }
+
+                    cmd += boost::lexical_cast<string>(static_cast<int>(setval*convfacs[idx]));
                 }
                 else {
                     cmd = "go:" + boost::lexical_cast<string>(idx);
@@ -296,26 +362,49 @@ int main(int argc, char* argv[])
                 string rpl = send_lowlevel(serial_interface, cmd);
 
                 if(load_defaults) {
-                    for(vector<tp::tuple<double,double,double,double> >::const_iterator it = defaultparams.begin();
-                        it != defaultparams.end(); ++it){
-                        if(it->get<0>() == eval)
+                    // for(vector<tp::tuple<double,double,double,double> >::const_iterator it = defaultparams.begin();
+                        // it != defaultparams.end(); ++it){
+                    for(size_t i=0; i < defaultparams.size(); ++i){
+                        if(eval < defaultparams[i].get<0>())
                         {
-                            cout << "Load default values for " << it->get<0>()
+                            if(i==0) {
+                                cerr << "Energy is smaller than minimum energy in defaultparams, don't know what to do" << endl;
+                                return -1;
+                            }
+
+                            double E1 = defaultparams[i-1].get<0>();
+                            double E2 = defaultparams[i].get<0>();
+
+                            cout << "Load default values for " << eval
                                  << "eV" << endl;
+
                             //x-deflection
+                            double xdefl1 = defaultparams[i-1].get<1>();
+                            double xdefl2 = defaultparams[i].get<1>();
                             cmd = "po:6," + boost::lexical_cast<string>(
-                                static_cast<int>(it->get<1>()*convfacs[6]));
-                            cout << "Command to send: "<< cmd << endl;
+                                static_cast<int>(linearfit(E1,E2,xdefl1,xdefl2, eval)*convfacs[6]));
+                            cout << "setting Xdefl to (fit): "
+                                 << linearfit(E1,E2,xdefl1,xdefl2, eval) << endl;
+                            cout << "\tCommand to send: "<< cmd << endl;
                             send_lowlevel(serial_interface, cmd);
+
                             //y-deflection
+                            double ydefl1 = defaultparams[i-1].get<2>();
+                            double ydefl2 = defaultparams[i].get<2>();
                             cmd = "po:7," + boost::lexical_cast<string>(
-                                static_cast<int>(it->get<2>()*convfacs[7]));
-                            cout << "Command to send: "<< cmd << endl;
+                                static_cast<int>(linearfit(E1,E2,ydefl1,ydefl2, eval)*convfacs[7]));
+                            cout << "setting Ydefl to (fit): "
+                                 << linearfit(E1,E2,ydefl1,ydefl2, eval) << endl;
+                            cout << "\tCommand to send: "<< cmd << endl;
                             send_lowlevel(serial_interface, cmd);
                             //Vfocus
+                            double vg1 = defaultparams[i-1].get<3>();
+                            double vg2 = defaultparams[i].get<3>();
                             cmd = "po:4," + boost::lexical_cast<string>(
-                                static_cast<int>(it->get<3>()*convfacs[4]));
-                            cout << "Command to send: "<< cmd << endl;
+                                static_cast<int>(linearfit(E1,E2,vg1,vg2, eval)*convfacs[4]));
+                            cout << "setting Vgrid to (fit): "
+                                 << linearfit(E1,E2,vg1,vg2, eval) << endl;
+                            cout << "\tCommand to send: "<< cmd << endl;
                             send_lowlevel(serial_interface, cmd);
                             break;
                         }
@@ -344,7 +433,7 @@ int main(int argc, char* argv[])
                 cout << rpl << endl;
             }
 
-            if(send_single_cmd)
+            if(send_cmds && ++curcmdidx == cmds.size())
                 break;
 
             // for(size_t i=0; i < rpl.length(); ++i) {
