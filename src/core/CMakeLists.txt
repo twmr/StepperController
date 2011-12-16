@@ -1,4 +1,4 @@
-add_definitions(-DSERIAL_DEBUG)
+#add_definitions(-DSERIAL_DEBUG)
 
 set(CMAKE_CXX_FLAGS "-Wall -std=c++0x -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-Wextra")
@@ -12,7 +12,9 @@ add_executable(
 		IAPBoard.cpp
 		IAP_server.cpp
 )
-target_link_libraries(moves_server ${CTB_LIBRARY} boost_system boost_regex boost_program_options pthread)
+target_link_libraries(moves_server ${CTB_LIBRARY} boost_system
+	boost_regex boost_program_options pthread)
+install(TARGETS moves_server RUNTIME DESTINATION bin)
 
 add_executable(
 	moves_client_cli
@@ -20,6 +22,7 @@ add_executable(
 )
 target_link_libraries(moves_client_cli ${CTB_LIBRARY} boost_system
 	boost_program_options boost_thread-mt pthread readline)
+install(TARGETS moves_client_cli RUNTIME DESTINATION bin)
 
 add_executable(
   moves_egun_cli
@@ -29,3 +32,5 @@ add_executable(
 )
 target_link_libraries(moves_egun_cli ${CTB_LIBRARY} boost_system
 	boost_program_options pthread readline)
+
+install(TARGETS moves_egun_cli RUNTIME DESTINATION bin)
