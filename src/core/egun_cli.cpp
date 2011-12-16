@@ -398,12 +398,12 @@ int main(int argc, char* argv[])
                             cout << "\tCommand to send: "<< cmd << endl;
                             send_lowlevel(serial_interface, cmd);
                             //Vfocus
-                            double vg1 = defaultparams[i-1].get<3>();
-                            double vg2 = defaultparams[i].get<3>();
+                            double vf1 = defaultparams[i-1].get<3>();
+                            double vf2 = defaultparams[i].get<3>();
                             cmd = "po:4," + boost::lexical_cast<string>(
-                                static_cast<int>(linearfit(E1,E2,vg1,vg2, eval)*convfacs[4]));
-                            cout << "setting Vgrid to (fit): "
-                                 << linearfit(E1,E2,vg1,vg2, eval) << endl;
+                                static_cast<int>(linearfit(E1,E2,vf1,vf2, eval)*convfacs[4]));
+                            cout << "setting Vfocus to (fit): "
+                                 << linearfit(E1,E2,vf1,vf2, eval) << endl;
                             cout << "\tCommand to send: "<< cmd << endl;
                             send_lowlevel(serial_interface, cmd);
                             break;
