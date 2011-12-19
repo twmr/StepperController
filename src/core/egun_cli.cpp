@@ -328,7 +328,11 @@ int main(int argc, char* argv[])
                         bool found=false;
                         for(size_t i=0; i < defaultparams.size(); ++i){
                             if(setval >= defaultparams[i].get<0>())
-                                continue;
+                                //setval=defaultparams[end].get<0>()
+                                //should be allowed so don't skip it
+                                if(i < defaultparams.size()-1 ||
+                                   setval > defaultparams[defaultparams.size()-1].get<0>())
+                                    continue;
                             if(i==0) {
                                 cerr << "Energy is smaller than minimum energy in defaultparams, don't know what to do" << endl;
                                 return -1;
