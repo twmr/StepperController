@@ -48,6 +48,9 @@ namespace tp = boost::tuples;
 using boost::asio::ip::tcp;
 using namespace std;
 
+#define SLEEPALLOWED
+
+
 class egunconfig {
 public:
     egunconfig(const std::string & configfile) {
@@ -160,52 +163,38 @@ int main(int argc, char* argv[])
                                       "Focus", "n/a", "Xdeflection", "Ydeflection" };
     const vector<unsigned int> convfacs = { 10, 1000, 100, 10,
                                             10, 0, 100, 100 };
-    const vector<tp::tuple<double, double, double, double> > defaultparams =
-        { { 10.0, 0.12, 0.0, 13.9 },
-          { 20, -0.36, 0.0,9.8},
-          { 30, -0.74, 0.0,9.1},
-          { 40, -0.90, 0.0,9.2},
-          { 50, -1.0, 0.0,10},
-          {100, -3, 0, 15},
-          {200, -7, 0, 36},
-          {300, -11, 0, 52},
-          {400, -12, -1, 69},
-          {500, -13, -5, 98},
-          {600, -15, -1, 136.6},
-          {700, -14, -3, 192},
-          {800, -15, -2, 292},
-          {900, -15, -3, 309},
-          {1000, -15,-1, 339},
-          {1100, -22,-4, 357},
-          {1200, -26,-2, 390},
-          {1300, -27,-5, 400},
-          {1400, -22,-7, 441},
-          {1500, -24,-10, 468},
-          {1600, -27,-10, 499}
+
+    enum
+    { EG_ENERGY=0,
+      EG_ENERGY_SHIFT,
+      EG_XDEFL,
+      EG_YDEFL,
+      EG_VFOCUS
     };
 
-    const vector<tp::tuple<double, double, double, double> > defaultshifts =
-        { {0.4, 0.12, 0.0, 13.9 },
-          {0.4 , -0.36, 0.0,9.8},
-          {0.4, -0.74, 0.0,9.1},
-          {0.4, -0.90, 0.0,9.2},
-          {0.5, -1.0, 0.0,10},
-          {0.7, -3, 0, 15},
-          {1.0, -7, 0, 36},
-          {1.3, -11, 0, 52},
-          {1.7, -12, -1, 69},
-          {2.0, -13, -5, 98},
-          {2.4, -15, -1, 136.6},
-          {2.7, -14, -3, 192},
-          {3.0, -15, -2, 292},
-          {3.4, -15, -3, 309},
-          {3.7, -15,-1, 339},
-          {4.1, -22,-4, 357},
-          {4.4, -26,-2, 390},
-          {4.8, -27,-5, 400},
-          {5.1, -22,-7, 441},
-          {5.4, -24,-10, 468},
-          {5.7, -27,-10, 499}
+    const vector<tp::tuple<double, double, double, double, double> > defaultparams =
+    /* Energy, Energy hardware error, xdefl, ydefl, Vfocus */
+        { { 10.0, 0.4, 0.12, 0.0, 13.9 },
+          { 20, 0.4, -0.36, 0.0,9.8},
+          { 30, 0.4, -0.74, 0.0,9.1},
+          { 40, 0.4, -0.90, 0.0,9.2},
+          { 50, 0.5, -1.0,  0.0,10},
+          {100, 0.7, -3,    0, 15},
+          {200, 1.0, -7,    0, 36},
+          {300, 1.3, -11,   0, 52},
+          {400, 1.7, -12,  -1, 69},
+          {500, 2.0, -13,  -5, 98},
+          {600, 2.4, -15,  -1, 136.6},
+          {700, 2.7, -14,  -3, 192},
+          {800, 3.0, -15,  -2, 292},
+          {900, 3.4, -15,  -3, 309},
+          {1000, 3.7, -15, -1, 339},
+          {1100, 4.1, -22, -4, 357},
+          {1200, 4.4, -26, -2, 390},
+          {1300, 4.8, -27, -5, 400},
+          {1400, 5.1, -22, -7, 441},
+          {1500, 5.4, -24, -10, 468},
+          {1600, 5.7, -27, -10, 499}
     };
 
     // Read command line arguments
@@ -327,31 +316,44 @@ int main(int argc, char* argv[])
                         //make a linear fit (plus shift the Egun error)
                         bool found=false;
                         for(size_t i=0; i < defaultparams.size(); ++i){
-                            if(setval >= defaultparams[i].get<0>())
-                                //setval=defaultparams[end].get<0>()
+                            if(setval >= defaultparams[i].get<EG_ENERGY>()) {
+                                //setval=defaultparams[end].get<EG_ENERGY>()
                                 //should be allowed so don't skip it
                                 if(i < defaultparams.size()-1 ||
-                                   setval > defaultparams[defaultparams.size()-1].get<0>())
+                                   setval > defaultparams[defaultparams.size()-1].get<EG_ENERGY>())
                                     continue;
+                            }
+
                             if(i==0) {
-                                cerr << "Energy is smaller than minimum energy in defaultparams, don't know what to do" << endl;
+                                cerr << "Energy is smaller than minimum energy in defaultparams,"
+                                     << " don't know what to do" << endl;
+                                #ifdef SLEEPALLOWED
+                                sleep(5);
+                                #endif
+
                                 return -1;
                             }
+
                             found=true;
-                            double E1 = defaultparams[i-1].get<0>();
-                            double E2 = defaultparams[i].get<0>();
-                            double dE1 = defaultshifts[i-1].get<0>();
-                            double dE2 = defaultshifts[i].get<0>();
+                            double E1 = defaultparams[i-1].get<EG_ENERGY>();
+                            double E2 = defaultparams[i].get<EG_ENERGY>();
+                            double dE1 = defaultparams[i-1].get<EG_ENERGY_SHIFT>();
+                            double dE2 = defaultparams[i].get<EG_ENERGY_SHIFT>();
 
                             double fit = linearfit(E1,E2,dE1,dE2, setval);
                             eval=setval-fit; //Energy value to send to the Egun Hardware
                             setval = eval;
                             cout << "setting Energy to: " << setval
-                                 << "; but send to Egun (due to systematic error of egun): " << eval << ")" << endl;
+                                 << "; but send to Egun (due to systematic error of egun): "
+                                 << eval << ")" << endl;
                             break;
                         }
                         if(!found) {
-                            cerr << "Energy is larger than maximum energy in defaultparams, don't know what to do" << endl;
+                            cerr << "Energy is larger than maximum energy in defaultparams,"
+                                 << " don't know what to do" << endl;
+                            #ifdef SLEEPALLOWED
+                            sleep(5);
+                            #endif
                             return -1;
                         }
                     }
@@ -369,22 +371,22 @@ int main(int argc, char* argv[])
                     // for(vector<tp::tuple<double,double,double,double> >::const_iterator it = defaultparams.begin();
                         // it != defaultparams.end(); ++it){
                     for(size_t i=0; i < defaultparams.size(); ++i){
-                        if(eval < defaultparams[i].get<0>())
+                        if(eval < defaultparams[i].get<EG_ENERGY>())
                         {
                             if(i==0) {
                                 cerr << "Energy is smaller than minimum energy in defaultparams, don't know what to do" << endl;
                                 return -1;
                             }
 
-                            double E1 = defaultparams[i-1].get<0>();
-                            double E2 = defaultparams[i].get<0>();
+                            double E1 = defaultparams[i-1].get<EG_ENERGY>();
+                            double E2 = defaultparams[i].get<EG_ENERGY>();
 
                             cout << "Load default values for " << eval
                                  << "eV" << endl;
 
                             //x-deflection
-                            double xdefl1 = defaultparams[i-1].get<1>();
-                            double xdefl2 = defaultparams[i].get<1>();
+                            double xdefl1 = defaultparams[i-1].get<EG_XDEFL>();
+                            double xdefl2 = defaultparams[i].get<EG_XDEFL>();
                             cmd = "po:6," + boost::lexical_cast<string>(
                                 static_cast<int>(linearfit(E1,E2,xdefl1,xdefl2, eval)*convfacs[6]));
                             cout << "setting Xdefl to (fit): "
@@ -393,8 +395,8 @@ int main(int argc, char* argv[])
                             send_lowlevel(serial_interface, cmd);
 
                             //y-deflection
-                            double ydefl1 = defaultparams[i-1].get<2>();
-                            double ydefl2 = defaultparams[i].get<2>();
+                            double ydefl1 = defaultparams[i-1].get<EG_YDEFL>();
+                            double ydefl2 = defaultparams[i].get<EG_YDEFL>();
                             cmd = "po:7," + boost::lexical_cast<string>(
                                 static_cast<int>(linearfit(E1,E2,ydefl1,ydefl2, eval)*convfacs[7]));
                             cout << "setting Ydefl to (fit): "
@@ -402,8 +404,8 @@ int main(int argc, char* argv[])
                             cout << "\tCommand to send: "<< cmd << endl;
                             send_lowlevel(serial_interface, cmd);
                             //Vfocus
-                            double vf1 = defaultparams[i-1].get<3>();
-                            double vf2 = defaultparams[i].get<3>();
+                            double vf1 = defaultparams[i-1].get<EG_VFOCUS>();
+                            double vf2 = defaultparams[i].get<EG_VFOCUS>();
                             cmd = "po:4," + boost::lexical_cast<string>(
                                 static_cast<int>(linearfit(E1,E2,vf1,vf2, eval)*convfacs[4]));
                             cout << "setting Vfocus to (fit): "
@@ -453,6 +455,9 @@ int main(int argc, char* argv[])
 
     } catch (exception& e) {
         cerr << "Exception: " << e.what() << endl;
+        #ifdef SLEEPALLOWED
+        sleep(5);
+        #endif
     }
 
     write_history(".egun.hist");
