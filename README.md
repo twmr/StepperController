@@ -20,6 +20,8 @@ The GUI (acting as the network client) uses the platform independent
 [wxWidgets](http://www.wxwidgets.org) Toolkit, but does not depend on
 Boost and on libctb.
 
+The whole software is released under the GNU General Public License v3.
+
 Requirements:
 -------------
 
