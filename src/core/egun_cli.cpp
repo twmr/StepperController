@@ -93,21 +93,22 @@ string send_lowlevel(STD_TR1::shared_ptr< RS232 >& sinf, string sendcmd)
 
     /* write() is assumed to work in one run, as the commands sent
        to the serial port have a really small size */
+    // std::cout << " - send len: " << sendcmd.length() << std::endl;
     send_retval = sinf->send(sendcmd.c_str(), sendcmd.length());
     // std::cout << " - send ret: " << send_retval;
 
     while(len <= 0 || readflag) {
         usleep(sinf->get_timeout());
 
-        //std::cout << "db1" << std::endl;
+        // std::cout << "db1" << std::endl;
         len = sinf->receive(&buffer[idx], sizeof(buffer)-idx);
-        //std::cout << "db2 len " << len << std::endl;
+        // std::cout << "db2 len " << len << std::endl;
         if(len <= 0) {
-            //std::cout << "db3" << std::endl;
+            // std::cout << "db3" << std::endl;
             if(readflag) break;
         }
         else {
-            //std::cout << "db4" << std::endl;
+            // std::cout << "db4" << std::endl;
             readflag = true;
             idx += len;
         }
