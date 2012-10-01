@@ -198,6 +198,11 @@ int main(int argc, char* argv[])
           {1600, 5.7, -27, -10, 499}
     };
 
+    // const vector<tp::tuple<double, double> > Vgridshift =
+    // {
+    //     { 30, 0.4 },
+    // };
+
     // Read command line arguments
     try {
         po::options_description desc("Allowed options");

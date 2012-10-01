@@ -122,7 +122,7 @@ size_t sctl_ctb::send( const char *buf, const ssize_t n)
 
     // sent string ?
     if( size > 0 ) {
-        rslog("#> ", buf);
+        rslog(buf, "#> ");
     }
     return size;
 }

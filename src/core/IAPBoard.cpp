@@ -606,9 +606,13 @@ int IAPBoard::SetZero()
 
     BarePosition bp = createBarePosition();
     get_cur_position(bp);
-    for(auto& axis : axes) {
-        axis.SetOffset(bp.GetCoordinate(axis.get_id()));
-        config_.setAxisElement<BarePosition::type>(axis.get_id(),"UnitConversion.offset",bp.GetCoordinate(axis.get_id()));
+    //for(auto& axis : axes) {
+    //    axis.SetOffset(bp.GetCoordinate(axis.get_id()));
+    //    config_.setAxisElement<BarePosition::type>(axis.get_id(),"UnitConversion.offset",bp.GetCoordinate(axis.get_id()));
+    //}
+    for(axesiter it = axes.begin(); it != axes.end(); ++it) {
+        it->SetOffset(bp.GetCoordinate(it->get_id()));
+        getConfig().setAxisElement<BarePosition::type>(it->get_id(),"UnitConversion.offset",bp.GetCoordinate(it->get_id()));
     }
     return 0;
 }
@@ -627,19 +631,21 @@ int IAPBoard::SetInitialZero()
 
     BarePosition bp = createBarePosition();
     get_cur_position(bp);
-    for(auto& axis : axes) {
-        config_.setAxisElement<BarePosition::type>(axis.get_id(),"Position", 0);
-        config_.setAxisElement<BarePosition::type>(axis.get_id(),"UnitConversion.offset", 0);
+    //for(auto& axis : axes) {
+    for(axesiter it = axes.begin(); it != axes.end(); ++it) {
 
-        size_t halfturns = config_.getAxisElement<size_t>(axis.get_id(),"init.halfaxisturns");
-        double rangefac = config_.getAxisElement<double>(axis.get_id(),"init.rangefac");
+        config_.setAxisElement<BarePosition::type>(it->get_id(),"Position", 0);
+        config_.setAxisElement<BarePosition::type>(it->get_id(),"UnitConversion.offset", 0);
+
+        size_t halfturns = config_.getAxisElement<size_t>(it->get_id(),"init.halfaxisturns");
+        double rangefac = config_.getAxisElement<double>(it->get_id(),"init.rangefac");
         BarePosition::type upperSL,lowerSL;
         if(!rangefac)
         {
             // for axes with non-symmetric upper and lower softlimits
             std::cout << "using forward and backward softlimit" << std::endl;
-            upperSL = config_.getAxisElement<double>(axis.get_id(),"init.constforwardSoftLimit");
-            lowerSL = -1*config_.getAxisElement<double>(axis.get_id(),"init.constbackwardSoftLimit");
+            upperSL = config_.getAxisElement<double>(it->get_id(),"init.constbackwardSoftLimit");
+            lowerSL = -1*config_.getAxisElement<double>(it->get_id(),"init.constforwardSoftLimit");
         }
         else{
             //symmetric upper and lower softlimits
@@ -648,9 +654,9 @@ int IAPBoard::SetInitialZero()
         }
         std::cout << "lowerSL: " << lowerSL << " is [halfturns] " << lowerSL/200.0
                   << "; upperSL: " << upperSL << " is [halfturns]: " << upperSL/200.0 << std::endl;
-        config_.setAxisElement<BarePosition::type>(axis.get_id(),"UpperLimit", upperSL);
-        config_.setAxisElement<BarePosition::type>(axis.get_id(),"LowerLimit", lowerSL);
-        axis.UpdateConfiguration();
+        config_.setAxisElement<BarePosition::type>(it->get_id(),"UpperLimit", upperSL);
+        config_.setAxisElement<BarePosition::type>(it->get_id(),"LowerLimit", lowerSL);
+        it->UpdateConfiguration();
     }
 
     // INITIALISATION DONE -> clear flag

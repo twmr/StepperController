@@ -40,7 +40,7 @@ namespace po = boost::program_options;
 
 using namespace std;
 
-STD_TR1::shared_ptr<IAPBoard> board(static_cast<IAPBoard*>(nullptr));
+STD_TR1::shared_ptr<IAPBoard> board(static_cast<IAPBoard*>(0));//ullptr));
 
 namespace IAPServer
 {
@@ -379,6 +379,7 @@ namespace IAPServer
 
 void catch_int(int sig)
 {
+    cout << "catched signal" <<  endl;
     if(!board->is_connected())
         exit(1);
 

@@ -706,7 +706,7 @@ void* PositionUpdateThread::Entry()
         std::cout << "PosThread: " << text.c_str() << std::endl;
 
         //TODO check smaller sleep intervals, also consider moving from TCP to UDP !!
-        wxThread::Sleep(400);
+        wxThread::Sleep(800);
     }
     return NULL;
 }
